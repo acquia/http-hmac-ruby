@@ -1,1 +1,1 @@
-require_relative '../../lib/httphmac/hmac'
+require 'acquia/httphmac'
