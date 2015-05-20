@@ -1,5 +1,5 @@
-require 'digest'
-require 'digest/hmac'
+require 'openssl'
+require 'base64'
 require 'securerandom'
 require 'uri'
 
@@ -51,7 +51,7 @@ module Acquia
 		end
 
 		def signature(base_string)
-		  Digest::HMAC.base64digest(base_string, @secret, Digest::SHA256)
+		  Base64.encode64(OpenSSL::HMAC.digest(OpenSSL::Digest::SHA256.new, @secret, base_string)).strip
 		end
 	end
 end
