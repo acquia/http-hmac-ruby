@@ -13,10 +13,6 @@ module Acquia
 		end
 
 		def prepare_request(http_method, host, id, path_info= '/', query_string = '', body = '', content_type = '')
-		  body_hash = nil
-		  if body.length
-  		  body_hash = Digest::SHA256.base64digest(body)
-  		end
   		http_method = http_method.upcase
 		  base_string_parts = [http_method, host, path_info]
 		  timestamp = "%0.6f" % Time.now.to_f
@@ -44,6 +40,7 @@ module Acquia
 		end
 
 		def valid_request?(http_method, host, path_info, authorization_header, query_string = '', body = '', content_type = '')
+		  false
 		end
 
 		def normalize_query(query_string)
