@@ -47,7 +47,17 @@ module Acquia
       end
 
       def valid_request?(http_method, host, path_info, authorization_header, query_string = '', body = '', content_type = '')
-        false
+        raise "Missing Authorization header!" if !authorization_header || authorization_header.empty?
+        prepare_request_headers(
+                                http_method,
+                                host,
+                                authorization_header['id'],
+                                path_info,
+                                query_string,
+                                body,
+                                content_type
+                               )
+        end
       end
 
       def parse_auth_header(header)
