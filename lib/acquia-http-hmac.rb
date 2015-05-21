@@ -15,7 +15,7 @@ module Acquia
       @secret = secret
     end
 
-    def prepare_request(http_method, host, id, path_info= '/', query_string = '', body = '', content_type = '')
+    def prepare_auth_header(http_method, host, id, path_info= '/', query_string = '', body = '', content_type = '')
       http_method = http_method.upcase
       base_string_parts = [http_method, host, path_info]
       @timestamp ||= "%0.6f" % Time.now.to_f
@@ -37,7 +37,7 @@ module Acquia
       authorization << "id=\"#{id}\""
       authorization << "timestamp=\"#{@timestamp}\""
       authorization << "nonce=\"#{@nonce}\""
-      authorization << "version=#{VERSION}"
+      authorization << "version=\"#{VERSION}\""
       authorization << "signature=\"#{signature(base_string)}\""
       authorization.join(',')
     end
@@ -50,7 +50,7 @@ module Acquia
       attributes = {}
       header.to_s.sub(/^acquia-http-hmac\s+/, '').split(/,\s*/).each do |value|
         m = value.match(/^(\w+)\=\"([^\"]*)\"$/)
-        attributes[m[1].to_sym] = URI.decode(m[2]))
+        attributes[m[1].to_sym] = URI.decode(m[2])
       end
       attributes
     end
