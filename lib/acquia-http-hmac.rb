@@ -15,38 +15,41 @@ module Acquia
       @secret = secret
     end
 
-    def prepare_auth_header(http_method, host, id, path_info= '/', query_string = '', body = '', content_type = '')
+    def prepare_request_headers(http_method, host, id, path_info= '/', query_string = '', body = '', content_type = '')
+      headers = {}
       http_method = http_method.upcase
       base_string_parts = [http_method, host, path_info]
       @timestamp ||= "%0.6f" % Time.now.to_f
       @nonce ||= SecureRandom.uuid
-      base_string_parts << "id=#{URI.escape(id)}&nonce=#{nonce}&realm=#{URI.escape(@realm)}&timestamp=#{timestamp}&version=#{VERSION}"
+      base_string_parts << "id=#{URI.encode(id)}&nonce=#{nonce}&realm=#{URI.encode(@realm)}&timestamp=#{timestamp}&version=#{VERSION}"
       if ['GET', 'HEAD'].include?(http_method)
         unless query_string.empty?
           base_string_parts << normalize_query(query_string)
         end
       elsif !body.empty?
-        # Body hash
-        base_string_parts << Digest::SHA256.base64digest(body)
+        body_hash = Base64.encode64(OpenSSL::Digest::SHA256.digest(body)).strip
+        headers['X-Acquia-Content-SHA256'] = body_hash
+        base_string_parts << body_hash
         base_string_parts << content_type.downcase
       end
       base_string = base_string_parts.join("\n")
 
       authorization = []
-      authorization << "acquia-http-hmac realm=\"#{@realm}\""
-      authorization << "id=\"#{id}\""
+      authorization << "acquia-http-hmac realm=\"#{URI.encode(@realm)}\""
+      authorization << "id=\"#{URI.encode(id)}\""
       authorization << "timestamp=\"#{@timestamp}\""
       authorization << "nonce=\"#{@nonce}\""
       authorization << "version=\"#{VERSION}\""
       authorization << "signature=\"#{signature(base_string)}\""
-      authorization.join(',')
+      headers['Authorization'] = authorization.join(',')
+      headers
     end
 
     def valid_request?(http_method, host, path_info, authorization_header, query_string = '', body = '', content_type = '')
       false
     end
 
-    def parse_header(header)
+    def parse_auth_header(header)
       attributes = {}
       header.to_s.sub(/^acquia-http-hmac\s+/, '').split(/,\s*/).each do |value|
         m = value.match(/^(\w+)\=\"([^\"]*)\"$/)
