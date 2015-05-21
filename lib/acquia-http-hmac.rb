@@ -26,7 +26,7 @@ module Acquia
         unless query_string.empty?
           base_string_parts << normalize_query(query_string)
         end
-      elsif !body.empty?
+      else
         body_hash = Base64.encode64(OpenSSL::Digest::SHA256.digest(body)).strip
         headers['X-Acquia-Content-SHA256'] = body_hash
         base_string_parts << body_hash
@@ -59,7 +59,23 @@ module Acquia
     end
 
     def normalize_query(query_string)
-      query_string
+      normalized = ''
+      parts = query_string.split('&').map do |p|
+        unless p.include?('=')
+          p << '='
+        end
+         URI.encode(p).split('=', 2)
+      end
+      sorted_parts = parts.sort do |x, y|
+        (key_x, val_x) = x
+        (key_y, val_y) = y
+        if key_x == key_y
+          val_x <=> val_y
+        else
+          key_x <=> key_y
+        end
+      end
+      normalized = sorted_parts.map {|p| "#{p[0]}=#{p[1]}" }.join('&')
     end
 
     def signature(base_string)

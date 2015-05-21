@@ -3,6 +3,12 @@ require_relative '../lib/acquia-http-hmac'
 
 class TestHTTPHmac < Minitest::Test
 
+  def test_normalize_query
+    mac = Acquia::HTTPHmac.new('TestRealm', 'thesecret')
+    query_string = 'base=foo&all'
+    assert_equal(mac.normalize_query(query_string), 'all=&base=foo')
+  end
+
   def test_prepare_request_get
     mac = Acquia::HTTPHmac.new('TestRealm', 'thesecret')
     headers = mac.prepare_request_headers('GET', 'www.example.com', 'test', '/hello')
@@ -24,6 +30,20 @@ class TestHTTPHmac < Minitest::Test
     assert(m, 'Did not find signature')
     # Compare to a signature calulated with the base string in PHP.
     assert_equal(m[1], "0oOg1jupjGm2jwNw3TbDGBGzY8gAuKp9uZ0EZHXeVWE=")
+    # Repeast with a query string that needs to be normalized.
+    query_string = 'base=foo&all'
+    headers = mac.prepare_request_headers('GET', 'www.example.com', 'test', '/hello', query_string)
+    auth_header = headers['Authorization']
+    # We expect the following base string:
+    # GET
+    # www.example.com
+    # /hello
+    # id=test&nonce=f2c91a46-b505-4b50-afa2-21364dc8ff34&realm=TestRealm&timestamp=1432180014.074019&version=2.0
+    # all=&base=foo
+    m = auth_header.match(/.*,signature="([^"]+)"$/)
+    assert(m, 'Did not find signature')
+    # Compare to a signature calulated with the base string in PHP.
+    assert_equal(m[1], "8xcsff99l6FYemE0B3Qs79TnOrTBh+j1fylBoKZgUls=")
   end
 
   def test_prepare_request_post
