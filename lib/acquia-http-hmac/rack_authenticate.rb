@@ -21,6 +21,10 @@ module Acquia
          return [401, {}, ['WWW-Authenticate: acquia-http-hmac realm="'+ @realm +'"']]
         end
 
+        attributes = Acquia::HTTPHmac::Auth.parse_auth_header(auth_header)
+        unless @creds_provider.valid?(attributes[:id]) && attributes[:realm] == @realm
+          return [403, {}, ['Invalid credentials']]
+        end
         @app.call(env)
       end
     end

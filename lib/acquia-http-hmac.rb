@@ -16,6 +16,15 @@ module Acquia
 
       # Prepare client-side request headers.
       #
+      # @param [Hash] args
+      #   Supported keys with String values:
+      #   - http_method: GET, POST, etc. Required.
+      #   - host: the HTTP host name, like www.example.com. Required.
+      #   - id: the client id or API key identifying the requestor. Required.
+      #   - path_info: The request path with leading slash.
+      #   - query_string: A query string for GET or HEAD requests.
+      #   - body: The request body for non-GET/HEAD.
+      #   - content_type: the value being set for Content-Type header.
       def prepare_request_headers(args = {})
         args = {
           http_method: nil,
@@ -57,12 +66,23 @@ module Acquia
       def request_authorized?(auth_attributes = {}, args = {})
         return false unless auth_attributes[:realm] == @realm
         args[:timestamp] = auth_attributes[:timestamp]
+        args[:nonce] = auth_attributes[:timestamp]
         false
       end
 
       # Common helper method for creating the string to sign.
       #
       # @param [Hash] args
+      #   Supported keys with String values:
+      #   - http_method: GET, POST, etc. Required.
+      #   - host: the HTTP host name, like www.example.com. Required.
+      #   - id: the client id or API key identifying the requestor. Required.
+      #   - path_info: The request path with leading slash.
+      #   - query_string: A query string for GET or HEAD requests.
+      #   - body_hash: The sha-256 of the request body for non-GET/HEAD.
+      #   - content_type: the value being set for Content-Type header.
+      #   - nonce: a UUID
+      #   - timestamp: a UNIX timpstamp as float with microsecond precision.
       def prepare_base_string(args = {})
         args[:http_method].upcase!
         base_string_parts = [args[:http_method], args[:host].downcase, args[:path_info]]
@@ -78,7 +98,7 @@ module Acquia
         base_string_parts.join("\n")
       end
 
-      def parse_auth_header(header)
+      def self.parse_auth_header(header)
         attributes = {}
         header.to_s.sub(/^acquia-http-hmac\s+/, '').split(/,\s*/).each do |value|
           m = value.match(/^(\w+)\=\"([^\"]*)\"$/)
@@ -87,13 +107,16 @@ module Acquia
         attributes
       end
 
+      # Helper method for sorting the query string for signing.
+      #
+      # @param [String] query_string
       def normalize_query(query_string)
         normalized = ''
         parts = query_string.split('&').map do |p|
           unless p.include?('=')
             p << '='
           end
-           URI.encode(p).split('=', 2)
+          p.split('=', 2)
         end
         sorted_parts = parts.sort do |x, y|
           (key_x, val_x) = x
