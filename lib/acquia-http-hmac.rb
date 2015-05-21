@@ -14,6 +14,8 @@ module Acquia
         @secret = secret
       end
 
+      # Prepare client-side request headers.
+      #
       def prepare_request_headers(args = {})
         args = {
           http_method: nil,
@@ -47,13 +49,23 @@ module Acquia
         headers
       end
 
-      def valid_request?(http_method, host, path_info, authorization_header, query_string = '', body = '', content_type = '')
+      # Check if a request is aithorized.
+      #
+      # @param [String] auth_attributes
+      #   The value of the parsed request Authorization header
+      # @param [Hash] args
+      def request_authorized?(auth_attributes = {}, args = {})
+        return false unless auth_attributes[:realm] == @realm
+        args[:timestamp] = auth_attributes[:timestamp]
         false
       end
 
+      # Common helper method for creating the string to sign.
+      #
+      # @param [Hash] args
       def prepare_base_string(args = {})
         args[:http_method].upcase!
-        base_string_parts = [args[:http_method], args[:host], args[:path_info]]
+        base_string_parts = [args[:http_method], args[:host].downcase, args[:path_info]]
         base_string_parts << "id=#{URI.encode(args[:id])}&nonce=#{args[:nonce]}&realm=#{URI.encode(@realm)}&timestamp=#{args[:timestamp]}&version=#{VERSION}"
         if ['GET', 'HEAD'].include?(args[:http_method])
           unless args[:query_string].empty?
