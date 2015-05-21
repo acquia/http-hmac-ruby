@@ -7,6 +7,12 @@ class TestHTTPHmac < Minitest::Test
     mac = Acquia::HTTPHmac.new('TestRealm', 'thesecret')
     query_string = 'base=foo&all'
     assert_equal(mac.normalize_query(query_string), 'all=&base=foo')
+    query_string = 'page=1&base=foo&all&base=zzz'
+    assert_equal(mac.normalize_query(query_string), 'all=&base=foo&base=zzz&page=1')
+    query_string = 'page=1&base=foo&all&base=zzz&base=foo'
+    assert_equal(mac.normalize_query(query_string), 'all=&base=foo&base=foo&base=zzz&page=1')
+    query_string = 'page=1&base=foo&all&base=z"z"z'
+    assert_equal(mac.normalize_query(query_string), 'all=&base=foo&base=z%22z%22z&page=1')
   end
 
   def test_prepare_request_get
