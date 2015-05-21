@@ -53,14 +53,25 @@ class TestHTTPHmac < Minitest::Test
   end
 
   def test_prepare_request_post
+    # Use known nonce and timestamp
     mac = Acquia::HTTPHmac.new('TestRealm', 'thesecret')
+    mac.nonce = "f2c91a46-b505-4b50-afa2-21364dc8ab34"
+    mac.timestamp = "1432180014.074019"
     body = '{"method":"hi.bob","params":["5","4","8"]}'
     content_type = 'application/json'
     headers = mac.prepare_request_headers('POST', 'www.example.com', 'test', '/hello', '', body, content_type)
     auth_header = headers['Authorization']
     assert(auth_header.match /acquia-http-hmac realm="TestRealm",id="test",timestamp="[0-9.]+",nonce="[0-9a-f-]+",version="2\.0",signature="[^"]+"/)
-    assert_equal(headers['X-Acquia-Content-SHA256'], Base64.encode64(OpenSSL::Digest::SHA256.digest(body)).strip)
+    assert_equal(headers['X-Acquia-Content-SHA256'], "6paRNxUA7WawFxJpRp4cEixDjHq3jfIKX072k9slalo=")
+    # We expect the following base string:
+    # POST
+    # www.example.com
+    # /hello
+    # id=test&nonce=f2c91a46-b505-4b50-afa2-21364dc8ab34&realm=TestRealm&timestamp=1432180014.074019&version=2.0
+    # application/json
+    # 6paRNxUA7WawFxJpRp4cEixDjHq3jfIKX072k9slalo=
     m = auth_header.match(/.*,signature="([^"]+)"$/)
+    assert_equal(m[1],"hptWaxZAXyB1G+p9P3uQTJe/DpD39XRKCcvmXOvaPBk=")
   end
 
 end

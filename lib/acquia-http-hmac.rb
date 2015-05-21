@@ -27,10 +27,10 @@ module Acquia
           base_string_parts << normalize_query(query_string)
         end
       else
+        base_string_parts << content_type.downcase
         body_hash = Base64.encode64(OpenSSL::Digest::SHA256.digest(body)).strip
         headers['X-Acquia-Content-SHA256'] = body_hash
         base_string_parts << body_hash
-        base_string_parts << content_type.downcase
       end
       base_string = base_string_parts.join("\n")
 
