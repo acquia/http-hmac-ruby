@@ -17,5 +17,9 @@ module Example
       end
       out
     end
+
+    post '/hello' do
+      {}
+    end
   end
 end

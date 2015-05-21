@@ -8,38 +8,39 @@ module Acquia
     VERSION = '2.0'
 
     class Auth
-      # These accessors are normally just for unit testing
-      attr_accessor :nonce, :timestamp
 
       def initialize(realm, secret)
         @realm = realm
         @secret = secret
       end
 
-      def prepare_request_headers(http_method, host, id, path_info= '/', query_string = '', body = '', content_type = '')
+      def prepare_request_headers(args = {})
+        args = {
+          http_method: nil,
+          host: nil,
+          id: nil,
+          path_info: '/',
+          query_string: '',
+          body: '',
+          content_type: '',
+          body_hash: nil,
+        }.merge(args)
+        args[:http_method].upcase!
+        args[:timestamp] ||= "%0.6f" % Time.now.to_f
+        args[:nonce] ||= SecureRandom.uuid
+
         headers = {}
-        http_method = http_method.upcase
-        base_string_parts = [http_method, host, path_info]
-        @timestamp ||= "%0.6f" % Time.now.to_f
-        @nonce ||= SecureRandom.uuid
-        base_string_parts << "id=#{URI.encode(id)}&nonce=#{nonce}&realm=#{URI.encode(@realm)}&timestamp=#{timestamp}&version=#{VERSION}"
-        if ['GET', 'HEAD'].include?(http_method)
-          unless query_string.empty?
-            base_string_parts << normalize_query(query_string)
-          end
-        else
-          base_string_parts << content_type.downcase
-          body_hash = Base64.encode64(OpenSSL::Digest::SHA256.digest(body)).strip
-          headers['X-Acquia-Content-SHA256'] = body_hash
-          base_string_parts << body_hash
+        unless ['GET', 'HEAD'].include?(args[:http_method])
+          args[:body_hash] = Base64.encode64(OpenSSL::Digest::SHA256.digest(args[:body])).strip
+          headers['X-Acquia-Content-SHA256'] = args[:body_hash]
         end
-        base_string = base_string_parts.join("\n")
+        base_string = prepare_base_string(args)
 
         authorization = []
         authorization << "acquia-http-hmac realm=\"#{URI.encode(@realm)}\""
-        authorization << "id=\"#{URI.encode(id)}\""
-        authorization << "timestamp=\"#{@timestamp}\""
-        authorization << "nonce=\"#{@nonce}\""
+        authorization << "id=\"#{URI.encode(args[:id])}\""
+        authorization << "timestamp=\"#{args[:timestamp]}\""
+        authorization << "nonce=\"#{args[:nonce]}\""
         authorization << "version=\"#{VERSION}\""
         authorization << "signature=\"#{signature(base_string)}\""
         headers['Authorization'] = authorization.join(',')
@@ -48,6 +49,21 @@ module Acquia
 
       def valid_request?(http_method, host, path_info, authorization_header, query_string = '', body = '', content_type = '')
         false
+      end
+
+      def prepare_base_string(args = {})
+        args[:http_method].upcase!
+        base_string_parts = [args[:http_method], args[:host], args[:path_info]]
+        base_string_parts << "id=#{URI.encode(args[:id])}&nonce=#{args[:nonce]}&realm=#{URI.encode(@realm)}&timestamp=#{args[:timestamp]}&version=#{VERSION}"
+        if ['GET', 'HEAD'].include?(args[:http_method])
+          unless args[:query_string].empty?
+            base_string_parts << normalize_query(args[:query_string])
+          end
+        else
+          base_string_parts << args[:content_type].downcase
+          base_string_parts << args[:body_hash]
+        end
+        base_string_parts.join("\n")
       end
 
       def parse_auth_header(header)

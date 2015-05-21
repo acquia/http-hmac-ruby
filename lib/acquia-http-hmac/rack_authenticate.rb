@@ -6,13 +6,21 @@ module Acquia
     class RackAuthenticate
       def initialize(app, options)
         @creds_provider = options[:creds_provider]
+        @realm = options[:realm]
         @app = app
       end
 
       def call(env)
         request = Rack::Request.new(env)
+        request.query_string
         request.params # contains the union of GET and POST params
         body = request.body   # the incoming request IO stream
+        auth_header = env['HTTP_AUTHORIZATION']
+
+        unless auth_header
+         return [401, {}, ['WWW-Authenticate: acquia-http-hmac realm="'+ @realm +'"']]
+        end
+
         @app.call(env)
       end
     end
