@@ -4,7 +4,7 @@ require_relative '../lib/acquia-http-hmac'
 class TestHTTPHmac < Minitest::Test
 
   def test_normalize_query
-    mac = Acquia::HTTPHmac.new('TestRealm', 'thesecret')
+    mac = Acquia::HTTPHmac::Auth.new('TestRealm', 'thesecret')
     query_string = 'base=foo&all'
     assert_equal(mac.normalize_query(query_string), 'all=&base=foo')
     query_string = 'page=1&base=foo&all&base=zzz'
@@ -16,13 +16,13 @@ class TestHTTPHmac < Minitest::Test
   end
 
   def test_prepare_request_get
-    mac = Acquia::HTTPHmac.new('TestRealm', 'thesecret')
+    mac = Acquia::HTTPHmac::Auth.new('TestRealm', 'thesecret')
     headers = mac.prepare_request_headers('GET', 'www.example.com', 'test', '/hello')
     auth_header = headers['Authorization']
     assert(auth_header.match /acquia-http-hmac realm="TestRealm",id="test",timestamp="[0-9.]+",nonce="[0-9a-f-]+",version="2\.0",signature="[^"]+"/)
 
     # Repeat with known nonce and timestamp
-    mac = Acquia::HTTPHmac.new('TestRealm', 'thesecret')
+    mac = Acquia::HTTPHmac::Auth.new('TestRealm', 'thesecret')
     mac.nonce = "f2c91a46-b505-4b50-afa2-21364dc8ff34"
     mac.timestamp = "1432180014.074019"
     headers = mac.prepare_request_headers('GET', 'www.example.com', 'test', '/hello')
@@ -54,7 +54,7 @@ class TestHTTPHmac < Minitest::Test
 
   def test_prepare_request_post
     # Use known nonce and timestamp
-    mac = Acquia::HTTPHmac.new('TestRealm', 'thesecret')
+    mac = Acquia::HTTPHmac::Auth.new('TestRealm', 'thesecret')
     mac.nonce = "f2c91a46-b505-4b50-afa2-21364dc8ab34"
     mac.timestamp = "1432180014.074019"
     body = '{"method":"hi.bob","params":["5","4","8"]}'
