@@ -10,12 +10,12 @@ class TestRackApp < Minitest::Test
   # Add just the auth middleware
   def app
     Rack::Builder.new {
-      creds = Acquia::HTTPHmac::FileCredentialProvider.new(File.dirname(__FILE__) + '/../example/passwords.yml')
+      passwords = Acquia::HTTPHmac::FilePasswordStorage.new(File.dirname(__FILE__) + '/../example/passwords.yml')
 
       map "/" do
         # Need this base middleware so that request.logger is defined.
         use Rack::NullLogger
-        use Acquia::HTTPHmac::RackAuthenticate, :creds_provider => creds, :realm => 'Test'
+        use Acquia::HTTPHmac::RackAuthenticate, :password_storage => passwords, :realm => 'Test'
         run Example::App
       end
     }.to_app

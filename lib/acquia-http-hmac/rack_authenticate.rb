@@ -7,7 +7,7 @@ module Acquia
   module HTTPHmac
     class RackAuthenticate
       def initialize(app, options)
-        @creds_provider = options[:creds_provider]
+        @password_storage = options[:password_storage]
         @realm = options[:realm]
         @app = app
       end
@@ -30,8 +30,8 @@ module Acquia
           body_hash: env['HTTP_X_ACQUIA_CONTENT_SHA256'],
         }
         mac = nil
-        if @creds_provider.valid?(attributes[:id])
-          mac = Acquia::HTTPHmac::Auth.new(@realm, @creds_provider.password(attributes[:id]))
+        if @password_storage.valid?(attributes[:id])
+          mac = Acquia::HTTPHmac::Auth.new(@realm, @password_storage.password(attributes[:id]))
         end
         unless mac && attributes[:realm] == @realm && mac.request_authenticated?(attributes, args)
           return [403, {}, ['Invalid credentials']]
@@ -48,7 +48,7 @@ module Acquia
       end
     end
 
-    class FileCredentialProvider
+    class FilePasswordStorage
 
       def initialize(filename)
         @creds = {}
