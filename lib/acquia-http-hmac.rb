@@ -35,6 +35,7 @@ module Acquia
           body: '',
           content_type: '',
           body_hash: nil,
+          version: VERSION,
         }.merge(args)
         args[:http_method].upcase!
         args[:timestamp] ||= "%0.6f" % Time.now.to_f
@@ -63,11 +64,17 @@ module Acquia
       # @param [String] auth_attributes
       #   The value of the parsed request Authorization header
       # @param [Hash] args
+      #   Supported keys with String values:
+      #   - http_method: GET, POST, etc. Required.
+      #   - host: the HTTP host name, like www.example.com. Required.
+      #   - query_string: A query string for GET or HEAD requests.
+      #   - content_type: the value being set for Content-Type header.
       def request_authorized?(auth_attributes = {}, args = {})
         return false unless auth_attributes[:realm] == @realm
-        args[:timestamp] = auth_attributes[:timestamp]
-        args[:nonce] = auth_attributes[:timestamp]
-        false
+        # Get :id, :timestamp, :nonce, :version
+        args = args.merge(auth_attributes)
+        base_string = prepare_base_string(args)
+        signature(base_string) == auth_attributes[:signature]
       end
 
       # Common helper method for creating the string to sign.
@@ -86,7 +93,7 @@ module Acquia
       def prepare_base_string(args = {})
         args[:http_method].upcase!
         base_string_parts = [args[:http_method], args[:host].downcase, args[:path_info]]
-        base_string_parts << "id=#{URI.encode(args[:id])}&nonce=#{args[:nonce]}&realm=#{URI.encode(@realm)}&timestamp=#{args[:timestamp]}&version=#{VERSION}"
+        base_string_parts << "id=#{URI.encode(args[:id])}&nonce=#{args[:nonce]}&realm=#{URI.encode(@realm)}&timestamp=#{args[:timestamp]}&version=#{args[:version]}"
         if ['GET', 'HEAD'].include?(args[:http_method])
           unless args[:query_string].empty?
             base_string_parts << normalize_query(args[:query_string])
