@@ -14,9 +14,9 @@ module Acquia
 
       def call(env)
         request = Rack::Request.new(env)
-        auth_header = env['HTTP_AUTHORIZATION']
+        auth_header = env['HTTP_AUTHORIZATION'].to_s
 
-        unless auth_header
+        if auth_header.empty?
          return [401, {}, ['WWW-Authenticate: acquia-http-hmac realm="'+ @realm +'"']]
         end
 
@@ -26,6 +26,8 @@ module Acquia
           query_string: request.query_string,
           http_method: request.request_method,
           path_info: request.path_info,
+          content_type: request.content_type,
+          body_hash: env['HTTP_X_ACQUIA_CONTENT_SHA256'],
         }
         mac = nil
         if @creds_provider.valid?(attributes[:id])
@@ -35,9 +37,9 @@ module Acquia
           return [403, {}, ['Invalid credentials']]
         end
         unless ['GET', 'HEAD'].include?(request.request_method)
-          body = request.body   # the incoming request IO stream
+          body = request.body.gets   # read the incoming request IO stream
           body_hash = Base64.encode64(OpenSSL::Digest::SHA256.digest(body)).strip
-          unless body_hash == attributes[:body_hash]
+          unless body_hash == env['HTTP_X_ACQUIA_CONTENT_SHA256']
             return [403, {}, ['Invalid body']]
           end
         end
