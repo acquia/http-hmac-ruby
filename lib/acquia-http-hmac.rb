@@ -71,7 +71,8 @@ module Acquia
       #   - content_type: the value being set for Content-Type header.
       def request_authorized?(auth_attributes = {}, args = {})
         return false unless auth_attributes[:realm] == @realm
-        # Get :id, :timestamp, :nonce, :version
+        return false unless auth_attributes[:nonce].match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/)
+        # Get :id, :timestamp, :nonce, :version from the attributes
         args = args.merge(auth_attributes)
         base_string = prepare_base_string(args)
         signature(base_string) == auth_attributes[:signature]
