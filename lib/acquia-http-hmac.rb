@@ -69,7 +69,7 @@ module Acquia
       #   - host: the HTTP host name, like www.example.com. Required.
       #   - query_string: A query string for GET or HEAD requests.
       #   - content_type: the value being set for Content-Type header.
-      def request_authorized?(auth_attributes = {}, args = {})
+      def request_authenticated?(auth_attributes = {}, args = {})
         return false unless auth_attributes[:realm] == @realm
         return false unless auth_attributes[:nonce].match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/)
         # Get :id, :timestamp, :nonce, :version from the attributes

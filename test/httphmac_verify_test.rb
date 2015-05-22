@@ -19,6 +19,6 @@ class HmacVerifyTest < Minitest::Test
     assert(headers['Authorization'], 'Did not get an Authorization header string')
     # Close the loop
     attributes = Acquia::HTTPHmac::Auth.parse_auth_header(headers['Authorization'])
-    assert(mac.request_authorized?(attributes, args_for_get))
+    assert(mac.request_authenticated?(attributes, args_for_get))
   end
 end

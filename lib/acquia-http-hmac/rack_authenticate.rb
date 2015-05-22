@@ -33,7 +33,7 @@ module Acquia
         if @creds_provider.valid?(attributes[:id])
           mac = Acquia::HTTPHmac::Auth.new(@realm, @creds_provider.password(attributes[:id]))
         end
-        unless mac && attributes[:realm] == @realm && mac.request_authorized?(attributes, args)
+        unless mac && attributes[:realm] == @realm && mac.request_authenticated?(attributes, args)
           return [403, {}, ['Invalid credentials']]
         end
         unless ['GET', 'HEAD'].include?(request.request_method)
@@ -43,6 +43,7 @@ module Acquia
             return [403, {}, ['Invalid body']]
           end
         end
+        env['ACQUIA_AUTHENTICATED_ID'] = attributes[:id]
         @app.call(env)
       end
     end
