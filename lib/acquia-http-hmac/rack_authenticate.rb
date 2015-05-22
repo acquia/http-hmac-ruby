@@ -1,4 +1,6 @@
 require 'yaml'
+require 'openssl'
+require 'base64'
 require_relative '../acquia-http-hmac'
 
 module Acquia
@@ -12,10 +14,6 @@ module Acquia
 
       def call(env)
         request = Rack::Request.new(env)
-        request.query_string
-        request.params # contains the union of GET and POST params
-        puts request.host
-        body = request.body   # the incoming request IO stream
         auth_header = env['HTTP_AUTHORIZATION']
 
         unless auth_header
@@ -36,7 +34,13 @@ module Acquia
         unless mac && attributes[:realm] == @realm && mac.request_authorized?(attributes, args)
           return [403, {}, ['Invalid credentials']]
         end
-
+        unless ['GET', 'HEAD'].include?(request.request_method)
+          body = request.body   # the incoming request IO stream
+          body_hash = Base64.encode64(OpenSSL::Digest::SHA256.digest(body)).strip
+          unless body_hash == attributes[:body_hash]
+            return [403, {}, ['Invalid body']]
+          end
+        end
         @app.call(env)
       end
     end
