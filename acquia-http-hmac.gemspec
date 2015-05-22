@@ -10,7 +10,8 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://www.acquia.com/'
   s.files = Dir["[A-Z]*", "{bin,etc,lib,test}/**/*"]
   s.require_paths = ["lib"]
-
+  s.executables << 'acq-http-request'
+  
   s.add_development_dependency('rspec', '~> 2.14')
   s.add_development_dependency('rake', '~> 10.4')
 

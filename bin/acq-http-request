@@ -1,0 +1,38 @@
+#!/usr/bin/env ruby
+
+require 'acquia-http-hmac'
+require 'optparse'
+require 'ostruct'
+
+if ARGV[0]
+  url = ARGV[0]
+end
+
+# Argument processing
+options = OpenStruct.new
+options.realm = 'Test'
+options.request = 'GET'
+o = OptionParser.new do |opts|
+  opts.banner = "Usage: #{$0} URL -u ID:PASSWORD"
+  opts.on("-r", "--realm [REALM]", "Server auth realm. Default 'Test'.") { |v| options.realm = v }
+  opts.on("-u", "--user [ID:PASSWORD]", "HMAC creds") { |v| options.user = v }
+  opts.on("-d", "--data [DATA]", "Data to POST.") { |v| options.data = v }
+  opts.on("-X", "--request [METHOD]", "HTTP method.  Defaults to GET, or POST if --data is specified.") { |v| options.request = v.upcase }
+end
+begin
+  o.parse!
+rescue Exception => e
+  puts e.message
+  puts o.help
+  exit 1
+end
+
+if ARGV.empty? or !options.user
+  puts o.help
+  exit
+end
+
+id, password = options.user.split(':', 2)
+
+p id
+p password
