@@ -32,7 +32,26 @@ if ARGV.empty? or !options.user
   exit
 end
 
+uri = URI(url)
+
+if uri.path == ''
+  uri.path = '/'
+end
+
 id, password = options.user.split(':', 2)
 
-p id
-p password
+mac = Acquia::HTTPHmac::Auth.new(options.realm, password)
+
+    args = {
+      http_method: options.request,
+      host: uri.host,
+      id: id,
+      path_info: uri.path,
+    }
+
+p args
+
+    mac.prepare_request_headers(args).each do |name, value|
+      #header(name, value)
+    end
+
