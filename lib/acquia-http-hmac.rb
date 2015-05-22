@@ -60,14 +60,21 @@ module Acquia
 
       # Check if a request is aithorized.
       #
-      # @param [String] auth_attributes
+      # @param [Hash] auth_attributes
       #   The value of the parsed request Authorization header
       # @param [Hash] args
-      def request_authorized?(auth_attributes = {}, args = {})
-        return false unless auth_attributes[:realm] == @realm
-        args[:timestamp] = auth_attributes[:timestamp]
-        args[:nonce] = auth_attributes[:timestamp]
-        false
+      #    Must include :body_hash param with value of X-Acquia-Content-SHA256 if present
+      #    May include :drift_window to override default value of 5 seconds
+
+      def request_authorized?(auth_headers = {}, args = {})
+        # Make sure the timestamp is valid
+        delta_t = (args[:timestamp].to_f - Time.now.to_f).abs
+        drift_window = args[:drift_window] ? args[:drift_window].to_f : 5.0
+        return false unless (delta_t) < drift_window
+
+        # Validate the signature
+        sig = signature(prepare_base_string(args))
+        sig == auth_headers[:signature]
       end
 
       # Common helper method for creating the string to sign.
