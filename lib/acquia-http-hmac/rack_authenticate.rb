@@ -17,7 +17,8 @@ module Acquia
         auth_header = env['HTTP_AUTHORIZATION'].to_s
 
         if auth_header.empty?
-         return [401, {}, ['WWW-Authenticate: acquia-http-hmac realm="'+ @realm +'"']]
+         challenge = 'acquia-http-hmac realm="'+ @realm +'"'
+         return [401, {'WWW-Authenticate' => challenge}, ['WWW-Authenticate: ' + challenge]]
         end
 
         attributes = Acquia::HTTPHmac::Auth.parse_auth_header(auth_header)
@@ -69,6 +70,10 @@ module Acquia
       def data(id)
         fail('Invalid id') unless @creds[id]
         @creds[id]
+      end
+
+      def ids
+        @creds.keys
       end
     end
   end

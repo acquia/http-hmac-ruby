@@ -9,10 +9,11 @@ Gem::Specification.new do |s|
   s.email = 'engineering@acquia.com'
   s.homepage    = 'https://www.acquia.com/'
   s.files = Dir["[A-Z]*", "{bin,etc,lib,test}/**/*"]
+  s.bindir = 'bin'
   s.require_paths = ["lib"]
   s.executables << 'acq-http-request'
-  
-  s.add_development_dependency('rspec', '~> 2.14')
+
+  s.add_runtime_dependency('excon', '>= 0.44.4')
   s.add_development_dependency('rake', '~> 10.4')
 
   s.add_development_dependency('grape', '~> 0.9.0')

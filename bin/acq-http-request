@@ -11,13 +11,13 @@ end
 # Argument processing
 options = OpenStruct.new
 options.realm = 'Test'
-options.request = 'GET'
+options.http_method = 'GET'
 o = OptionParser.new do |opts|
   opts.banner = "Usage: #{$0} URL -u ID:PASSWORD"
   opts.on("-r", "--realm [REALM]", "Server auth realm. Default 'Test'.") { |v| options.realm = v }
   opts.on("-u", "--user [ID:PASSWORD]", "HMAC creds") { |v| options.user = v }
   opts.on("-d", "--data [DATA]", "Data to POST.") { |v| options.data = v }
-  opts.on("-X", "--request [METHOD]", "HTTP method.  Defaults to GET, or POST if --data is specified.") { |v| options.request = v.upcase }
+  opts.on("-X", "--request [METHOD]", "HTTP method.  Defaults to GET, or POST if --data is specified.") { |v| options.http_method = v.upcase }
 end
 begin
   o.parse!
@@ -32,26 +32,48 @@ if ARGV.empty? or !options.user
   exit
 end
 
-uri = URI(url)
+uri = URI(URI.encode(url))
 
 if uri.path == ''
   uri.path = '/'
+end
+
+host = uri.host
+if uri.port && uri.port != '443'
+  host << ':' + uri.port
 end
 
 id, password = options.user.split(':', 2)
 
 mac = Acquia::HTTPHmac::Auth.new(options.realm, password)
 
-    args = {
-      http_method: options.request,
-      host: uri.host,
-      id: id,
-      path_info: uri.path,
-    }
 
-p args
 
-    mac.prepare_request_headers(args).each do |name, value|
-      #header(name, value)
-    end
+args = {
+  http_method: options.http_method,
+  host: host,
+  id: id,
+  path_info: uri.path,
+}
+
+case
+when options.http_method == 'GET'
+  req = Net::HTTP::GET.new(uri)
+when options.http_method == 'HEAD'
+  req = Net::HTTP::HEAD.new(uri)
+when options.http_method == 'POST'
+  req = Net::HTTP::POST.new(uri)
+when options.http_method == 'PUT'
+  req = Net::HTTP::PUT.new(uri)
+when options.http_method == 'DELETE'
+  req = Net::HTTP::DELETE.new(uri)
+else
+  fail("Unsupported HTTP verb #{options.http_method}")
+end
+mac.prepare_request_headers(args).each do |name, value|
+  #header(name, value)
+end
+
+net = Net::HTTP.new(uri.host, uri.port)
+net.use_ssl= uri.host != 'localhost'
 
