@@ -11,6 +11,35 @@ class TestRackApp < Minitest::Test
     @passwords ||= Acquia::HTTPHmac::FilePasswordStorage.new(File.dirname(__FILE__) + '/../example/passwords.yml')
   end
 
+  def prepare_get(id, password)
+    mac = Acquia::HTTPHmac::Auth.new('Test', password)
+    args = {
+      http_method: 'GET',
+      host: 'example.org', # Default in the Rack test
+      id: id,
+      path_info: '/hello',
+    }
+    mac.prepare_request_headers(args).each do |name, value|
+      header(name, value)
+    end
+  end
+
+  def prepare_post(id, password, body, content_type = 'application/json')
+    mac = Acquia::HTTPHmac::Auth.new('Test', password)
+    args = {
+      http_method: 'POST',
+      host: 'example.org', # Default in the Rack test
+      id: id,
+      path_info: '/hello',
+      body: body,
+      content_type: 'application/json',
+    }
+    mac.prepare_request_headers(args).each do |name, value|
+      header(name, value)
+    end
+    header('content-type', content_type)
+  end
+
   # Add just the auth middleware
   def app
     passwords = get_password_storage
@@ -35,16 +64,7 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     id = passwords.ids.first
     # Use an invalid password by adding a letter.
-    mac = Acquia::HTTPHmac::Auth.new('Test', passwords.data(id)['password'] + 'a')
-    args = {
-      http_method: 'GET',
-      host: 'example.org', # Default in the Rack test
-      id: id,
-      path_info: '/hello',
-    }
-    mac.prepare_request_headers(args).each do |name, value|
-      header(name, value)
-    end
+    prepare_get(id, passwords.data(id)['password'] + 'a')
     get '/hello'
     assert_equal(403, last_response.status)
   end
@@ -52,17 +72,8 @@ class TestRackApp < Minitest::Test
   def test_403_bad_id_get
     passwords = get_password_storage
     id = passwords.ids.first
-    mac = Acquia::HTTPHmac::Auth.new('Test', passwords.data(id)['password'])
     # Use an invalid id by adding a letter.
-    args = {
-      http_method: 'GET',
-      host: 'example.org', # Default in the Rack test
-      id: id + 'a',
-      path_info: '/hello',
-    }
-    mac.prepare_request_headers(args).each do |name, value|
-      header(name, value)
-    end
+    prepare_get(id + 'a', passwords.data(id)['password'])
     get '/hello'
     assert_equal(403, last_response.status)
   end
@@ -70,16 +81,7 @@ class TestRackApp < Minitest::Test
   def test_simple_get
     passwords = get_password_storage
     passwords.ids.each do |id|
-      mac = Acquia::HTTPHmac::Auth.new('Test', passwords.data(id)['password'])
-      args = {
-        http_method: 'GET',
-        host: 'example.org', # Default in the Rack test
-        id: id,
-        path_info: '/hello',
-      }
-      mac.prepare_request_headers(args).each do |name, value|
-        header(name, value)
-      end
+      prepare_get(id, passwords.data(id)['password'])
       get '/hello'
       assert_equal(200, last_response.status)
     end
@@ -88,22 +90,20 @@ class TestRackApp < Minitest::Test
   def test_simple_post
     passwords = get_password_storage
     passwords.ids.each do |id|
-      mac = Acquia::HTTPHmac::Auth.new('Test', passwords.data(id)['password'])
       body = '{"method":"hi.bob","params":["5","4","8"]}'
-      args = {
-        http_method: 'POST',
-        host: 'example.org', # Default in the Rack test
-        id: id,
-        path_info: '/hello',
-        body: body,
-        content_type: 'application/json',
-      }
-      mac.prepare_request_headers(args).each do |name, value|
-        header(name, value)
-      end
-      header('content-type', 'application/json')
+      prepare_post(id, passwords.data(id)['password'], body)
       post '/hello', body
       assert_equal(201, last_response.status)
     end
+  end
+
+  def test_403_bad_body_post
+    passwords = get_password_storage
+    id = passwords.ids.first
+    body = '{"method":"hi.bob","params":["5","4","8"]}'
+    prepare_post(id, passwords.data(id)['password'], body)
+    # Create a mismatch by adding an extra character to the body.
+    post '/hello', body + 'a'
+    assert_equal(403, last_response.status)
   end
 end
