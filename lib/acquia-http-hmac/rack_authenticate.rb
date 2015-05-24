@@ -17,8 +17,8 @@ module Acquia
         auth_header = env['HTTP_AUTHORIZATION'].to_s
 
         if auth_header.empty?
-         challenge = 'acquia-http-hmac realm="'+ @realm +'"'
-         return [401, {'WWW-Authenticate' => challenge}, ['WWW-Authenticate: ' + challenge]]
+          challenge = 'acquia-http-hmac realm="'+ @realm +'"'
+          return [401, {'WWW-Authenticate' => challenge}, ['WWW-Authenticate: ' + challenge]]
         end
 
         attributes = Acquia::HTTPHmac::Auth.parse_auth_header(auth_header)
@@ -44,8 +44,21 @@ module Acquia
             return [403, {}, ['Invalid body']]
           end
         end
+        # Pass the id to later stages
         env['ACQUIA_AUTHENTICATED_ID'] = attributes[:id]
-        @app.call(env)
+        (status, headers, resp_body) = @app.call(env)
+        final_body = ''
+        # Rack defines the response body as implementing #each
+        resp_body.each { |part| final_body << part }
+        pragma = []
+        # Preserve existing headers
+        if headers['Pragma']
+          pragma << headers['Pragma']
+        end
+        # Use the request nonce to sign the response.
+        pragma << 'hmac_digest=' + mac.signature(attributes[:nonce] + final_body) + ';'
+        headers['Pragma'] = pragma.join(', ')
+        [status, headers, [final_body]]
       end
     end
 

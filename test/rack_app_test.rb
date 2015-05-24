@@ -11,6 +11,7 @@ class TestRackApp < Minitest::Test
     @passwords ||= Acquia::HTTPHmac::FilePasswordStorage.new(File.dirname(__FILE__) + '/../example/passwords.yml')
   end
 
+  # Helper method
   def prepare_get(id, password)
     mac = Acquia::HTTPHmac::Auth.new('Test', password)
     args = {
@@ -24,6 +25,7 @@ class TestRackApp < Minitest::Test
     end
   end
 
+  # Helper method
   def prepare_post(id, password, body, content_type = 'application/json')
     mac = Acquia::HTTPHmac::Auth.new('Test', password)
     args = {
