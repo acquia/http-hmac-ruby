@@ -78,7 +78,7 @@ module Acquia
           true
         else
           body = request.body.gets   # read the incoming request IO stream
-          body_hash = Base64.encode64(OpenSSL::Digest::SHA256.digest(body)).strip
+          body_hash = Base64.strict_encode64(OpenSSL::Digest::SHA256.digest(body))
           body_hash == env['HTTP_X_ACQUIA_CONTENT_SHA256']
         end
       end

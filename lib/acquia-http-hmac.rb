@@ -9,9 +9,9 @@ module Acquia
 
     class Auth
 
-      def initialize(realm, secret)
+      def initialize(realm, base64_secret)
         @realm = realm
-        @secret = secret
+        @secret = Base64.decode64(base64_secret)
       end
 
       # Prepare client-side request headers.
@@ -45,7 +45,7 @@ module Acquia
 
         headers = {}
         unless ['GET', 'HEAD'].include?(args[:http_method])
-          args[:body_hash] = Base64.encode64(OpenSSL::Digest::SHA256.digest(args[:body])).strip
+          args[:body_hash] = Base64.strict_encode64(OpenSSL::Digest::SHA256.digest(args[:body]))
           headers['X-Acquia-Content-SHA256'] = args[:body_hash]
         end
         headers['Cache-Control'] = 'no-transform'
@@ -142,7 +142,7 @@ module Acquia
       end
 
       def signature(base_string)
-        Base64.encode64(OpenSSL::HMAC.digest(OpenSSL::Digest::SHA256.new, @secret, base_string)).strip
+        Base64.strict_encode64(OpenSSL::HMAC.digest(OpenSSL::Digest::SHA256.new, @secret, base_string))
       end
     end
   end

@@ -68,7 +68,7 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     id = passwords.ids.first
     # Use an invalid password by adding a letter.
-    prepare_get(id, passwords.data(id)['password'] + 'a')
+    prepare_get(id, 'a' + passwords.data(id)['password'])
     get '/hello'
     assert_equal(403, last_response.status)
   end
