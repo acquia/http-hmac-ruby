@@ -13,16 +13,53 @@ module Acquia
       end
 
       def call(env)
-        request = Rack::Request.new(env)
         auth_header = env['HTTP_AUTHORIZATION'].to_s
-
-        if auth_header.empty?
-          challenge = 'acquia-http-hmac realm="'+ @realm +'"'
-          return [401, {'WWW-Authenticate' => challenge}, ['WWW-Authenticate: ' + challenge]]
-        end
+        return unauthorized if auth_header.empty?
 
         attributes = Acquia::HTTPHmac::Auth.parse_auth_header(auth_header)
-        args = {
+        mac = message_authenticator(attributes)
+        args = args_for_authenticator(env)
+        return denied('Invalid credentials') unless mac && mac.request_authenticated?(attributes, args)
+
+        return denied('Invalid body') unless valid_body?(env)
+
+        # Pass the id to later stages
+        env['ACQUIA_AUTHENTICATED_ID'] = attributes[:id]
+        (status, headers, resp_body) = @app.call(env)
+        sign_response(status, headers, resp_body, attributes, mac)
+      end
+
+      private
+
+      def unauthorized
+        [ 401,
+          {
+            'Content-Type' => 'text/plain',
+            'Content-Length' => '0',
+            'WWW-Authenticate' => 'acquia-http-hmac realm="'+ @realm +'"'
+          },
+          []
+        ]
+      end
+
+      def denied(message)
+        [ 403,
+          { 'Content-Type' => 'text/plain' },
+          [message]
+        ]
+      end
+
+      def message_authenticator(attributes)
+        mac = nil
+        if attributes[:realm] == @realm && @password_storage.valid?(attributes[:id])
+          mac = Acquia::HTTPHmac::Auth.new(@realm, @password_storage.password(attributes[:id]))
+        end
+        mac
+      end
+
+      def args_for_authenticator(env)
+        request = Rack::Request.new(env)
+        {
           host: request.host_with_port,
           query_string: request.query_string,
           http_method: request.request_method,
@@ -30,23 +67,30 @@ module Acquia
           content_type: request.content_type,
           body_hash: env['HTTP_X_ACQUIA_CONTENT_SHA256'],
         }
-        mac = nil
-        if @password_storage.valid?(attributes[:id])
-          mac = Acquia::HTTPHmac::Auth.new(@realm, @password_storage.password(attributes[:id]))
-        end
-        unless mac && attributes[:realm] == @realm && mac.request_authenticated?(attributes, args)
-          return [403, {}, ['Invalid credentials']]
-        end
-        unless ['GET', 'HEAD'].include?(request.request_method)
+      end
+
+      def valid_body?(env)
+        request = Rack::Request.new(env)
+        if ['GET', 'HEAD'].include?(request.request_method)
+          # No body to validate
+          true
+        else
           body = request.body.gets   # read the incoming request IO stream
           body_hash = Base64.encode64(OpenSSL::Digest::SHA256.digest(body)).strip
-          unless body_hash == env['HTTP_X_ACQUIA_CONTENT_SHA256']
-            return [403, {}, ['Invalid body']]
-          end
+          body_hash == env['HTTP_X_ACQUIA_CONTENT_SHA256']
         end
-        # Pass the id to later stages
-        env['ACQUIA_AUTHENTICATED_ID'] = attributes[:id]
-        (status, headers, resp_body) = @app.call(env)
+      end
+
+      # Add a hmac signature over the resonse body.
+      #
+      # @param [Int] status
+      # @param [Hash] headers
+      # @param [Enumerable] resp_body
+      # @param [Hash] attributes
+      # @param [Acquia::HTTPHmac::Auth] mac
+      #
+      # @return Array
+      def sign_response(status, headers, resp_body, attributes, mac)
         final_body = ''
         # Rack defines the response body as implementing #each
         resp_body.each { |part| final_body << part }
@@ -58,8 +102,11 @@ module Acquia
         # Use the request nonce to sign the response.
         pragma << 'hmac_digest=' + mac.signature(attributes[:nonce] + final_body) + ';'
         headers['Pragma'] = pragma.join(', ')
+        # Nobody should be changing or caching this response.
+        headers['Cache-Control'] = 'no-transform, no-cache, no-store, private, max-age=0'
         [status, headers, [final_body]]
       end
+
     end
 
     class FilePasswordStorage

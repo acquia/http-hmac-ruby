@@ -26,7 +26,7 @@ module Acquia
       #   - body: The request body for non-GET/HEAD.
       #   - content_type: the value being set for Content-Type header.
       def prepare_request_headers(args = {})
-        args = {
+        merged_args = {
           http_method: nil,
           host: nil,
           id: nil,
@@ -37,6 +37,8 @@ module Acquia
           body_hash: nil,
           version: VERSION,
         }.merge(args)
+        # Merge args such that the calling method gets all the values.
+        args.replace(merged_args)
         args[:http_method].upcase!
         args[:timestamp] ||= "%0.6f" % Time.now.to_f
         args[:nonce] ||= SecureRandom.uuid
@@ -46,6 +48,7 @@ module Acquia
           args[:body_hash] = Base64.encode64(OpenSSL::Digest::SHA256.digest(args[:body])).strip
           headers['X-Acquia-Content-SHA256'] = args[:body_hash]
         end
+        headers['Cache-Control'] = 'no-transform'
         base_string = prepare_base_string(args)
 
         authorization = []

@@ -23,6 +23,7 @@ class TestRackApp < Minitest::Test
     mac.prepare_request_headers(args).each do |name, value|
       header(name, value)
     end
+    args
   end
 
   # Helper method
@@ -40,6 +41,7 @@ class TestRackApp < Minitest::Test
       header(name, value)
     end
     header('content-type', content_type)
+    args
   end
 
   # Add just the auth middleware
@@ -83,9 +85,19 @@ class TestRackApp < Minitest::Test
   def test_simple_get
     passwords = get_password_storage
     passwords.ids.each do |id|
-      prepare_get(id, passwords.data(id)['password'])
+      args = prepare_get(id, passwords.data(id)['password'])
       get '/hello'
       assert_equal(200, last_response.status)
+      m = nil
+      last_response.headers.each do |name, value|
+        if name.downcase == 'pragma'
+          m = value.match(/hmac_digest=([^;]+);/i)
+          break
+        end
+      end
+      assert(m)
+      mac = Acquia::HTTPHmac::Auth.new('Test', passwords.data(id)['password'])
+      assert_equal(m[1], mac.signature(args[:nonce] + last_response.body))
     end
   end
 
