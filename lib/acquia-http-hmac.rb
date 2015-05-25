@@ -37,7 +37,7 @@ module Acquia
           body_hash: nil,
           version: VERSION,
         }.merge(args)
-        # Merge args such that the calling method gets all the values.
+        # Replace args so that the calling method gets all the values.
         args.replace(merged_args)
         args[:http_method].upcase!
         args[:timestamp] ||= "%0.6f" % Time.now.to_f

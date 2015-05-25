@@ -51,7 +51,7 @@ class TestRackApp < Minitest::Test
       map "/" do
         # Need this base middleware so that request.logger is defined.
         use Rack::NullLogger
-        use Acquia::HTTPHmac::RackAuthenticate, :password_storage => passwords, :realm => 'Test'
+        use Acquia::HTTPHmac::RackAuthenticate, :password_storage => passwords, :realm => 'Test', :nonce_checker => Acquia::HTTPHmac::NoopNonceChecker.new
         run Example::App
       end
     }.to_app

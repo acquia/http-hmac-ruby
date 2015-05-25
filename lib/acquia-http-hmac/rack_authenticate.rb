@@ -9,6 +9,7 @@ module Acquia
       def initialize(app, options)
         @password_storage = options[:password_storage]
         @realm = options[:realm]
+        @nonce_checker = options[:nonce_checker]
         @app = app
       end
 
@@ -17,6 +18,7 @@ module Acquia
         return unauthorized if auth_header.empty?
 
         attributes = Acquia::HTTPHmac::Auth.parse_auth_header(auth_header)
+        return denied('Invalid nonce') unless @nonce_checker.valid?(attributes[:id], attributes[:nonce])
         mac = message_authenticator(attributes)
         args = args_for_authenticator(env)
         return denied('Invalid credentials') unless mac && mac.request_authenticated?(attributes, args)
@@ -51,7 +53,7 @@ module Acquia
 
       def message_authenticator(attributes)
         mac = nil
-        if attributes[:realm] == @realm && @password_storage.valid?(attributes[:id])
+        if @password_storage.valid?(attributes[:id])
           mac = Acquia::HTTPHmac::Auth.new(@realm, @password_storage.password(attributes[:id]))
         end
         mac
@@ -134,6 +136,25 @@ module Acquia
 
       def ids
         @creds.keys
+      end
+    end
+
+    class NoopNonceChecker
+      def valid?(id, nonce)
+        true
+      end
+    end
+
+    class MemoryNonceChecker
+      def initialize
+        @seen = {}
+      end
+
+      def valid?(id, nonce)
+        @seen[id] ||= {}
+        valid = !@seen[id][nonce]
+        @seen[id][nonce] = Time.now.to_i
+        valid
       end
     end
   end
