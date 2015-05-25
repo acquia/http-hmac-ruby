@@ -12,14 +12,14 @@ class TestRackApp < Minitest::Test
   end
 
   # Helper method
-  def prepare_get(id, password)
+  def prepare_get(id, password, args = {})
     mac = Acquia::HTTPHmac::Auth.new('Test', password)
     args = {
       http_method: 'GET',
       host: 'example.org', # Default in the Rack test
       id: id,
       path_info: '/hello',
-    }
+    }.merge(args)
     mac.prepare_request_headers(args).each do |name, value|
       header(name, value)
     end
@@ -27,7 +27,7 @@ class TestRackApp < Minitest::Test
   end
 
   # Helper method
-  def prepare_post(id, password, body, content_type = 'application/json')
+  def prepare_post(id, password, body, args = {})
     mac = Acquia::HTTPHmac::Auth.new('Test', password)
     args = {
       http_method: 'POST',
@@ -36,11 +36,11 @@ class TestRackApp < Minitest::Test
       path_info: '/hello',
       body: body,
       content_type: 'application/json',
-    }
+    }.merge(args)
     mac.prepare_request_headers(args).each do |name, value|
       header(name, value)
     end
-    header('content-type', content_type)
+    header('content-type', args[:content_type])
     args
   end
 
@@ -51,7 +51,7 @@ class TestRackApp < Minitest::Test
       map "/" do
         # Need this base middleware so that request.logger is defined.
         use Rack::NullLogger
-        use Acquia::HTTPHmac::RackAuthenticate, :password_storage => passwords, :realm => 'Test', :nonce_checker => Acquia::HTTPHmac::NoopNonceChecker.new
+        use Acquia::HTTPHmac::RackAuthenticate, :password_storage => passwords, :realm => 'Test', :nonce_checker => Acquia::HTTPHmac::MemoryNonceChecker.new
         run Example::App
       end
     }.to_app
@@ -78,6 +78,28 @@ class TestRackApp < Minitest::Test
     id = passwords.ids.first
     # Use an invalid id by adding a letter.
     prepare_get(id + 'a', passwords.data(id)['password'])
+    get '/hello'
+    assert_equal(403, last_response.status)
+  end
+
+  def test_403_bad_nonce_get
+    passwords = get_password_storage
+    id = passwords.ids.first
+    # Use an invalid nonce, not a UUID.
+    prepare_get(id, passwords.data(id)['password'], nonce: 'wxyz')
+    get '/hello'
+    assert_equal(403, last_response.status)
+  end
+
+  def test_403_duplicate_nonce_get
+    passwords = get_password_storage
+    id = passwords.ids.first
+    nonce = SecureRandom.uuid
+    prepare_get(id, passwords.data(id)['password'], nonce: nonce)
+    get '/hello'
+    assert_equal(200, last_response.status)
+    # Repeat with the same nonce.
+    prepare_get(id, passwords.data(id)['password'], nonce: nonce)
     get '/hello'
     assert_equal(403, last_response.status)
   end
