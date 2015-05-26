@@ -19,8 +19,8 @@ module Acquia
 
         attributes = Acquia::HTTPHmac::Auth.parse_auth_header(auth_header)
         return denied('Invalid nonce') unless @nonce_checker.valid?(attributes[:id], attributes[:nonce])
-        mac = message_authenticator(attributes)
         args = args_for_authenticator(env)
+        mac = message_authenticator(attributes[:id], args[:timestamp])
         return denied('Invalid credentials') unless mac && mac.request_authenticated?(attributes, args)
 
         return denied('Invalid body') unless valid_body?(env)
@@ -51,10 +51,10 @@ module Acquia
         ]
       end
 
-      def message_authenticator(attributes)
+      def message_authenticator(id, timestamp)
         mac = nil
-        if @password_storage.valid?(attributes[:id])
-          mac = Acquia::HTTPHmac::Auth.new(@realm, @password_storage.password(attributes[:id]))
+        if @password_storage.valid?(id)
+          mac = Acquia::HTTPHmac::Auth.new(@realm, @password_storage.password(id, timestamp))
         end
         mac
       end
@@ -68,7 +68,7 @@ module Acquia
           path_info: request.path_info,
           content_type: request.content_type,
           body_hash: env['HTTP_X_ACQUIA_CONTENT_SHA256'],
-          timestamp: env['HTTP_X_ACQUIA_TIMESTAMP'],
+          timestamp: env['HTTP_X_ACQUIA_TIMESTAMP'].to_i,
         }
       end
 
@@ -109,28 +109,35 @@ module Acquia
     class FilePasswordStorage
 
       def initialize(filename)
-        @creds = {}
+        @@creds = {}
         if File.exist?(filename)
-          @creds = YAML.safe_load(File.read(filename))
+          @@creds = YAML.safe_load(File.read(filename))
         end
       end
 
       def valid?(id)
-        !!@creds[id]
+        !!@@creds[id]
       end
 
-      def password(id)
-        fail('Invalid id') unless @creds[id] && @creds[id]['password']
-        @creds[id]['password']
+      # Fetch the password using the id and timestamp from the request.
+      #
+      # @param [String] id
+      #   An arbitrary identifier.
+      # @param [Integer] timestamp
+      #   A unix timestamp. The returned password may be different based on
+      #   the current date or time.
+      def password(id, timestamp)
+        fail('Invalid id') unless @@creds[id] && @@creds[id]['password']
+        @@creds[id]['password']
       end
 
       def data(id)
-        fail('Invalid id') unless @creds[id]
-        @creds[id]
+        fail('Invalid id') unless @@creds[id]
+        @@creds[id]
       end
 
       def ids
-        @creds.keys
+        @@creds.keys
       end
     end
 
@@ -142,13 +149,13 @@ module Acquia
 
     class MemoryNonceChecker
       def initialize
-        @seen = {}
+        @@seen = {}
       end
 
       def valid?(id, nonce)
-        @seen[id] ||= {}
-        valid = !@seen[id][nonce]
-        @seen[id][nonce] = Time.now.to_i
+        @@seen[id] ||= {}
+        valid = !@@seen[id][nonce]
+        @@seen[id][nonce] = Time.now.to_i
         valid
       end
     end
