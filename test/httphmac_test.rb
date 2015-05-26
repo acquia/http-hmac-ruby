@@ -28,7 +28,7 @@ class TestHTTPHmac < Minitest::Test
     assert(auth_header.match /acquia-http-hmac realm="TestRealm",id="test",nonce="[0-9a-f-]+",version="2\.0",signature="[^"]+"/)
 
     # Repeat with known nonce and timestamp
-    # base64 of 'thesecret'
+    # "dGhlc2VjcmV0" is base64 of 'thesecret'
     mac = Acquia::HTTPHmac::Auth.new('TestRealm', "dGhlc2VjcmV0")
     args[:nonce] = "f2c91a46-b505-4b50-afa2-21364dc8ff34"
     args[:timestamp] = "1432180014"
