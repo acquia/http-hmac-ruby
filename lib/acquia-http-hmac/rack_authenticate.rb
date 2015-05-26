@@ -68,6 +68,7 @@ module Acquia
           path_info: request.path_info,
           content_type: request.content_type,
           body_hash: env['HTTP_X_ACQUIA_CONTENT_SHA256'],
+          timestamp: env['HTTP_X_ACQUIA_TIMESTAMP'],
         }
       end
 

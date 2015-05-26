@@ -25,25 +25,26 @@ class TestHTTPHmac < Minitest::Test
     }
     headers = mac.prepare_request_headers(args)
     auth_header = headers['Authorization']
-    assert(auth_header.match /acquia-http-hmac realm="TestRealm",id="test",timestamp="[0-9.]+",nonce="[0-9a-f-]+",version="2\.0",signature="[^"]+"/)
+    assert(auth_header.match /acquia-http-hmac realm="TestRealm",id="test",nonce="[0-9a-f-]+",version="2\.0",signature="[^"]+"/)
 
     # Repeat with known nonce and timestamp
     # base64 of 'thesecret'
     mac = Acquia::HTTPHmac::Auth.new('TestRealm', "dGhlc2VjcmV0")
     args[:nonce] = "f2c91a46-b505-4b50-afa2-21364dc8ff34"
-    args[:timestamp] = "1432180014.074019"
+    args[:timestamp] = "1432180014"
     headers = mac.prepare_request_headers(args)
     auth_header = headers['Authorization']
     # We expect the following base string:
     # GET
     # www.example.com
     # /hello
-    # id=test&nonce=f2c91a46-b505-4b50-afa2-21364dc8ff34&realm=TestRealm&timestamp=1432180014.074019&version=2.0
+    # id=test&nonce=f2c91a46-b505-4b50-afa2-21364dc8ff34&realm=TestRealm&version=2.0
+    # 1432180014
 
     m = auth_header.match(/.*,signature="([^"]+)"$/)
     assert(m, 'Did not find signature')
     # Compare to a signature calulated with the base string in PHP.
-    assert_equal(m[1], "0oOg1jupjGm2jwNw3TbDGBGzY8gAuKp9uZ0EZHXeVWE=")
+    assert_equal(m[1], "Wno5oM5P0sRLZDYr0QhQBqfrNAlCkrHqKaD3YKieNiA=")
     # Repeast with a query string that needs to be normalized.
     args[:query_string] = 'base=foo&all'
     headers = mac.prepare_request_headers(args)
@@ -52,12 +53,13 @@ class TestHTTPHmac < Minitest::Test
     # GET
     # www.example.com
     # /hello
-    # id=test&nonce=f2c91a46-b505-4b50-afa2-21364dc8ff34&realm=TestRealm&timestamp=1432180014.074019&version=2.0
+    # id=test&nonce=f2c91a46-b505-4b50-afa2-21364dc8ff34&realm=TestRealm&version=2.0
+    # 1432180014
     # all=&base=foo
     m = auth_header.match(/.*,signature="([^"]+)"$/)
     assert(m, 'Did not find signature')
     # Compare to a signature calulated with the base string in PHP.
-    assert_equal(m[1], "8xcsff99l6FYemE0B3Qs79TnOrTBh+j1fylBoKZgUls=")
+    assert_equal(m[1], "jAxOJ2DUQ2hdFgP6mQDf1XnTg3ZailP9PLPUfN4w+I4=")
   end
 
   def test_prepare_request_post
@@ -69,23 +71,24 @@ class TestHTTPHmac < Minitest::Test
       id: 'test',
       path_info: '/hello',
       nonce: "f2c91a46-b505-4b50-afa2-21364dc8ab34",
-      timestamp: "1432180014.074019",
+      timestamp: "1432180014",
     }
     args[:body] = '{"method":"hi.bob","params":["5","4","8"]}'
     args[:content_type] = 'application/json'
     headers = mac.prepare_request_headers(args)
     auth_header = headers['Authorization']
-    assert(auth_header.match /acquia-http-hmac realm="TestRealm",id="test",timestamp="[0-9.]+",nonce="[0-9a-f-]+",version="2\.0",signature="[^"]+"/)
+    assert(auth_header.match /acquia-http-hmac realm="TestRealm",id="test",nonce="[0-9a-f-]+",version="2\.0",signature="[^"]+"/)
     assert_equal(headers['X-Acquia-Content-SHA256'], "6paRNxUA7WawFxJpRp4cEixDjHq3jfIKX072k9slalo=")
     # We expect the following base string:
     # POST
     # www.example.com
     # /hello
-    # id=test&nonce=f2c91a46-b505-4b50-afa2-21364dc8ab34&realm=TestRealm&timestamp=1432180014.074019&version=2.0
+    # id=test&nonce=f2c91a46-b505-4b50-afa2-21364dc8ab34&realm=TestRealm&version=2.0
+    # 1432180014
     # application/json
     # 6paRNxUA7WawFxJpRp4cEixDjHq3jfIKX072k9slalo=
     m = auth_header.match(/.*,signature="([^"]+)"$/)
-    assert_equal(m[1],"hptWaxZAXyB1G+p9P3uQTJe/DpD39XRKCcvmXOvaPBk=")
+    assert_equal(m[1],"cJFZumwWQfa1Af3oStlaJSNGYOZ/pLwPOYTBN/GxKFY=")
   end
 
 end

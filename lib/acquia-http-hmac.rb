@@ -40,21 +40,22 @@ module Acquia
         # Replace args so that the calling method gets all the values.
         args.replace(merged_args)
         args[:http_method].upcase!
-        args[:timestamp] ||= "%0.6f" % Time.now.to_f
+        args[:timestamp] ||= Time.now.to_i.to_s
         args[:nonce] ||= SecureRandom.uuid
 
         headers = {}
+        headers['X-Acquia-Timestamp'] = args[:timestamp]
         unless ['GET', 'HEAD'].include?(args[:http_method])
           args[:body_hash] = Base64.strict_encode64(OpenSSL::Digest::SHA256.digest(args[:body]))
           headers['X-Acquia-Content-SHA256'] = args[:body_hash]
         end
+        # Discourage intermediate proxies from altering the content.
         headers['Cache-Control'] = 'no-transform'
         base_string = prepare_base_string(args)
 
         authorization = []
         authorization << "acquia-http-hmac realm=\"#{URI.encode(@realm)}\""
         authorization << "id=\"#{URI.encode(args[:id])}\""
-        authorization << "timestamp=\"#{args[:timestamp]}\""
         authorization << "nonce=\"#{args[:nonce]}\""
         authorization << "version=\"#{VERSION}\""
         authorization << "signature=\"#{signature(base_string)}\""
@@ -70,6 +71,7 @@ module Acquia
       #   Supported keys with String values:
       #   - http_method: GET, POST, etc. Required.
       #   - host: the HTTP host name, like www.example.com. Required.
+      #   - timestamp: Unix timestamp from the X-Acquia-Timestamp header
       #   - query_string: A query string for GET or HEAD requests.
       #   - content_type: the value being set for Content-Type header.
       def request_authenticated?(auth_attributes = {}, args = {})
@@ -97,7 +99,8 @@ module Acquia
       def prepare_base_string(args = {})
         args[:http_method].upcase!
         base_string_parts = [args[:http_method], args[:host].downcase, args[:path_info]]
-        base_string_parts << "id=#{URI.encode(args[:id])}&nonce=#{args[:nonce]}&realm=#{URI.encode(@realm)}&timestamp=#{args[:timestamp]}&version=#{args[:version]}"
+        base_string_parts << "id=#{URI.encode(args[:id])}&nonce=#{args[:nonce]}&realm=#{URI.encode(@realm)}&version=#{args[:version]}"
+        base_string_parts << args[:timestamp]
         if ['GET', 'HEAD'].include?(args[:http_method])
           unless args[:query_string].empty?
             base_string_parts << normalize_query(args[:query_string])

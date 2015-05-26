@@ -10,15 +10,16 @@ class HmacVerifyTest < Minitest::Test
       id: '310bd66b-acc6-4aeb-affc-f53ed3753c45',
       path_info: "/some/path",
       query_string: "foo=bar",
+      timestamp: Time.now.to_i
     }
   end
 
   def test_simple_get
-    mac = Acquia::HTTPHmac::Auth.new('TestRealm', 'thesecret')
+    mac = Acquia::HTTPHmac::Auth.new('TestRealm', 'dGhlc2VjcmV0')
     headers = mac.prepare_request_headers(args_for_get)
     assert(headers['Authorization'], 'Did not get an Authorization header string')
     # Close the loop
     attributes = Acquia::HTTPHmac::Auth.parse_auth_header(headers['Authorization'])
-    assert(mac.request_authenticated?(attributes, args_for_get))
+    assert(mac.request_authenticated?(attributes, args_for_get), '#request_authenticated? returned false')
   end
 end
