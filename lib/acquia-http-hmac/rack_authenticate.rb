@@ -97,15 +97,8 @@ module Acquia
         final_body = ''
         # Rack defines the response body as implementing #each
         resp_body.each { |part| final_body << part }
-        pragma = []
-        # Preserve existing headers
-        if headers['Pragma']
-          pragma << headers['Pragma']
-        end
-        pragma << 'no-cache'
         # Use the request nonce to sign the response.
-        pragma << 'hmac_digest=' + mac.signature(attributes[:nonce] + final_body) + ';'
-        headers['Pragma'] = pragma.join(', ')
+        headers['X-Acquia-Content-HMAC-SHA256'] = mac.signature(attributes[:nonce] + final_body)
         # Nobody should be changing or caching this response.
         headers['Cache-Control'] = 'no-transform, no-cache, no-store, private, max-age=0'
         [status, headers, [final_body]]
