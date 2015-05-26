@@ -1,4 +1,5 @@
 require 'bundler/setup'
+require 'securerandom'
 require 'grape'
 require 'json'
 
@@ -10,16 +11,32 @@ module Example
     format :json
     default_format :json
 
-    get '/hello' do
-      out = {hello: "world"}
-      params.each do |k,v|
-        out[k] = v
+    helpers do
+      def hellos
+        # Store data in memory for simple testing.
+        @@hellos ||= {SecureRandom.uuid => "world"}
+        @@hellos
       end
-      out
     end
 
-    post '/hello' do
-      {}
+    resource :hello do
+      get do
+        {hello: hellos}
+      end
+
+      desc "Return a single hello."
+      get ':id' do
+        {hello: hellos[params[:id]]}
+      end
+
+      params do
+        requires :hello, type: String, desc: "A hello."
+      end
+      post do
+        id = SecureRandom.uuid
+        hellos[id] = params[:hello]
+        {id => params[:hello]}
+      end
     end
   end
 end

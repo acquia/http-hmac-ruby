@@ -119,14 +119,14 @@ class TestRackApp < Minitest::Test
       end
       assert(response_hmac, 'Did not find response HMAC header')
       mac = Acquia::HTTPHmac::Auth.new('Test', passwords.data(id)['password'])
-      assert_equal(response_hmac, mac.signature(args[:nonce] + last_response.body))
+      assert_equal(response_hmac, mac.signature(args[:nonce] + "\n" + last_response.body))
     end
   end
 
   def test_simple_post
     passwords = get_password_storage
     passwords.ids.each do |id|
-      body = '{"method":"hi.bob","params":["5","4","8"]}'
+      body = '{"hello":"hi.bob","params":["5","4","8"]}'
       prepare_post(id, passwords.data(id)['password'], body)
       post '/hello', body
       assert_equal(201, last_response.status)
@@ -136,7 +136,7 @@ class TestRackApp < Minitest::Test
   def test_403_bad_body_post
     passwords = get_password_storage
     id = passwords.ids.first
-    body = '{"method":"hi.bob","params":["5","4","8"]}'
+    body = '{"hello":"hi.bob","params":["5","4","8"]}'
     prepare_post(id, passwords.data(id)['password'], body)
     # Create a mismatch by adding an extra character to the body.
     post '/hello', body + 'a'
