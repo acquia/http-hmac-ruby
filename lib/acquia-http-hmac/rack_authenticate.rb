@@ -153,6 +153,8 @@ module Acquia
       end
 
       def valid?(id, nonce)
+        # A UUID is 36 characters.
+        return false unless nonce.length == 36
         @@seen[id] ||= {}
         valid = !@@seen[id][nonce]
         @@seen[id][nonce] = Time.now.to_i

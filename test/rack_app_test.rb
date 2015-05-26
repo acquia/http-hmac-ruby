@@ -64,6 +64,13 @@ class TestRackApp < Minitest::Test
     assert(last_response.headers['WWW-Authenticate'], "Didn't get a WWW-Authenticate header in the response")
   end
 
+  def test_403_bad_authorization_header
+    # Add a basic auth header.
+    header('Authorization', 'Basic Zm9vOmJhcmJheg==')
+    get '/hello'
+    assert_equal(403, last_response.status, "Didn't get a 403 response code")
+  end
+
   def test_403_bad_password_get
     passwords = get_password_storage
     id = passwords.ids.first
