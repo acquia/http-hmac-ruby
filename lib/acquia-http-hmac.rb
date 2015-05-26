@@ -77,7 +77,9 @@ module Acquia
       def request_authenticated?(auth_attributes = {}, args = {})
         return false unless auth_attributes[:realm] == @realm
         return false unless auth_attributes[:nonce].match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/)
-        # Get :id, :timestamp, :nonce, :version from the attributes
+        # Allow up to 900 sec (15 min) of clock skew.
+        return false if (Time.now.to_i - args[:timestamp].to_i).abs > 900
+        # Get :id, :nonce, :version from the attributes
         args = args.merge(auth_attributes)
         base_string = prepare_base_string(args)
         signature(base_string) == auth_attributes[:signature]
