@@ -112,9 +112,16 @@ module Acquia
       end
 
       def self.parse_auth_header(header)
-        attributes = {}
+        attributes = {
+          id: '',
+          nonce: '',
+          realm: '',
+          signature: '',
+          version: '',
+        }
         header.to_s.sub(/^acquia-http-hmac\s+/, '').split(/,\s*/).each do |value|
           m = value.match(/^(\w+)\=\"([^\"]*)\"$/)
+          break unless m
           attributes[m[1].to_sym] = URI.decode(m[2])
         end
         attributes
