@@ -99,13 +99,10 @@ module Acquia
       def prepare_base_string(args = {})
         args[:http_method].upcase!
         base_string_parts = [args[:http_method], args[:host].downcase, args[:path_info]]
+        base_string_parts << normalize_query(args[:query_string])
         base_string_parts << "id=#{URI.encode(args[:id])}&nonce=#{args[:nonce]}&realm=#{URI.encode(@realm)}&version=#{args[:version]}"
         base_string_parts << args[:timestamp]
-        if ['GET', 'HEAD'].include?(args[:http_method])
-          unless args[:query_string].empty?
-            base_string_parts << normalize_query(args[:query_string])
-          end
-        else
+        unless ['GET', 'HEAD'].include?(args[:http_method])
           base_string_parts << args[:content_type].downcase
           base_string_parts << args[:body_hash]
         end

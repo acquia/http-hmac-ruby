@@ -38,13 +38,14 @@ class TestHTTPHmac < Minitest::Test
     # GET
     # www.example.com
     # /hello
+    # 
     # id=test&nonce=f2c91a46-b505-4b50-afa2-21364dc8ff34&realm=TestRealm&version=2.0
     # 1432180014
 
     m = auth_header.match(/.*,signature="([^"]+)"$/)
     assert(m, 'Did not find signature')
     # Compare to a signature calulated with the base string in PHP.
-    assert_equal(m[1], "Wno5oM5P0sRLZDYr0QhQBqfrNAlCkrHqKaD3YKieNiA=")
+    assert_equal("hKHBXbx9KDirAWpvYKGOqHVSLn6yjD3V5aaQTRklPPA=", m[1])
     # Repeast with a query string that needs to be normalized.
     args[:query_string] = 'base=foo&all'
     headers = mac.prepare_request_headers(args)
@@ -53,13 +54,13 @@ class TestHTTPHmac < Minitest::Test
     # GET
     # www.example.com
     # /hello
+    # all=&base=foo
     # id=test&nonce=f2c91a46-b505-4b50-afa2-21364dc8ff34&realm=TestRealm&version=2.0
     # 1432180014
-    # all=&base=foo
     m = auth_header.match(/.*,signature="([^"]+)"$/)
     assert(m, 'Did not find signature')
     # Compare to a signature calulated with the base string in PHP.
-    assert_equal(m[1], "jAxOJ2DUQ2hdFgP6mQDf1XnTg3ZailP9PLPUfN4w+I4=")
+    assert_equal("5GQY2YnJVjenSJI9g0ak9staO5fNMFPiJJWfxuM3PbU=", m[1])
   end
 
   def test_prepare_request_post
@@ -83,12 +84,13 @@ class TestHTTPHmac < Minitest::Test
     # POST
     # www.example.com
     # /hello
+    # 
     # id=test&nonce=f2c91a46-b505-4b50-afa2-21364dc8ab34&realm=TestRealm&version=2.0
     # 1432180014
     # application/json
     # 6paRNxUA7WawFxJpRp4cEixDjHq3jfIKX072k9slalo=
     m = auth_header.match(/.*,signature="([^"]+)"$/)
-    assert_equal(m[1],"cJFZumwWQfa1Af3oStlaJSNGYOZ/pLwPOYTBN/GxKFY=")
+    assert_equal("Un7AVsJ80yxzR0Jn+LB6orziDrAistPNm3h33bNZiJ0=", m[1])
   end
 
 end

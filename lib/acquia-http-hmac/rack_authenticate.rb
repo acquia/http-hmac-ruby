@@ -102,6 +102,7 @@ module Acquia
         if headers['Pragma']
           pragma << headers['Pragma']
         end
+        pragma << 'no-cache'
         # Use the request nonce to sign the response.
         pragma << 'hmac_digest=' + mac.signature(attributes[:nonce] + final_body) + ';'
         headers['Pragma'] = pragma.join(', ')
