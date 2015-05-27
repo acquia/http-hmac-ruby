@@ -19,16 +19,16 @@ module Acquia
 
         attributes = Acquia::HTTPHmac::Auth.parse_auth_header(auth_header)
         return denied('Invalid nonce') unless @nonce_checker.valid?(attributes[:id], attributes[:nonce])
-        args = args_for_authenticator(env)
-        mac = message_authenticator(attributes[:id], args[:timestamp])
-        return denied('Invalid credentials') unless mac && mac.request_authenticated?(attributes, args)
+        args = args_for_authenticator(env, attributes)
+        mac = message_authenticator(args[:id], args[:timestamp])
+        return denied('Invalid credentials') unless mac && mac.request_authenticated?(args)
 
         return denied('Invalid body') unless valid_body?(env)
 
         # Pass the id to later stages
         env['ACQUIA_AUTHENTICATED_ID'] = attributes[:id]
         (status, headers, resp_body) = @app.call(env)
-        sign_response(status, headers, resp_body, attributes, mac)
+        sign_response(status, headers, resp_body, args[:nonce], mac)
       end
 
       private
@@ -59,9 +59,9 @@ module Acquia
         mac
       end
 
-      def args_for_authenticator(env)
+      def args_for_authenticator(env, attributes)
         request = Rack::Request.new(env)
-        {
+        args = {
           host: request.host_with_port,
           query_string: request.query_string,
           http_method: request.request_method,
@@ -69,7 +69,13 @@ module Acquia
           content_type: request.content_type,
           body_hash: env['HTTP_X_ACQUIA_CONTENT_SHA256'],
           timestamp: env['HTTP_X_ACQUIA_TIMESTAMP'].to_i,
-        }
+        }.merge(attributes)
+        # Map expected header names to the key that would be in env.
+        attributes[:headers].keys.each do |name|
+          key = 'HTTP_' + name.gsub('-', '_').upcase
+          args[:headers][name] = env[key] if env[key]
+        end
+        args
       end
 
       def valid_body?(env)
@@ -89,16 +95,16 @@ module Acquia
       # @param [Int] status
       # @param [Hash] headers
       # @param [Enumerable] resp_body
-      # @param [Hash] attributes
+      # @param [String] attributes
       # @param [Acquia::HTTPHmac::Auth] mac
       #
       # @return Array
-      def sign_response(status, headers, resp_body, attributes, mac)
+      def sign_response(status, headers, resp_body, nonce, mac)
         final_body = ''
         # Rack defines the response body as implementing #each
         resp_body.each { |part| final_body << part }
         # Use the request nonce to sign the response.
-        headers['X-Acquia-Content-HMAC-SHA256'] = mac.signature(attributes[:nonce] + "\n" + final_body)
+        headers['X-Acquia-Content-HMAC-SHA256'] = mac.signature(nonce + "\n" + final_body)
         # Nobody should be changing or caching this response.
         headers['Cache-Control'] = 'no-transform, no-cache, no-store, private, max-age=0'
         [status, headers, [final_body]]

@@ -43,30 +43,32 @@ class HmacVerifyTest < Minitest::Test
   end
 
   def test_get_no_body
-    header = Acquia::HTTPHmac::Auth::parse_auth_header(@req_get['Authorization'])
+    attributes = Acquia::HTTPHmac::Auth::parse_auth_header(@req_get['Authorization'])
     hmac = Acquia::HTTPHmac::Auth.new(@realm, @secret)
-    ret = hmac.request_authenticated?(header, get_params)
+    ret = hmac.request_authenticated?(get_params.merge(attributes))
     assert(ret, "request_authenticated? failed for GET")
   end
 
   def test_it_fails_with_invalid_realm
-    header = Acquia::HTTPHmac::Auth::parse_auth_header(@req_get['Authorization'])
+    attributes = Acquia::HTTPHmac::Auth::parse_auth_header(@req_get['Authorization'])
     hmac = Acquia::HTTPHmac::Auth.new('bad_realm', @secret)
-    ret = hmac.request_authenticated?(header, get_params)
+    ret = hmac.request_authenticated?(get_params.merge(attributes))
     assert(!ret, "request_authenticated? accepted invalid realm")
   end
 
   def test_it_fails_with_invalid_secret
-    header = Acquia::HTTPHmac::Auth::parse_auth_header(@req_get['Authorization'])
+    attributes = Acquia::HTTPHmac::Auth::parse_auth_header(@req_get['Authorization'])
     hmac = Acquia::HTTPHmac::Auth.new(@realm, Base64.strict_encode64('wrong password'))
-    ret = hmac.request_authenticated?(header, get_params)
+    ret = hmac.request_authenticated?(get_params.merge(attributes))
     assert(!ret, "request_authenticated? accepted invalid secret")
   end
 
   def test_post_with_body
-    header = Acquia::HTTPHmac::Auth::parse_auth_header(@req_post['Authorization'])
+    params = post_params
+    params[:body_hash] = @req_post['X-Acquia-Content-SHA256']
+    attributes = Acquia::HTTPHmac::Auth::parse_auth_header(@req_post['Authorization'])
     hmac = Acquia::HTTPHmac::Auth.new(@realm, @secret)
-    ret = hmac.request_authenticated?(header, post_params.merge({:body_hash => @req_post['X-Acquia-Content-SHA256']}))
+    ret = hmac.request_authenticated?(params.merge(attributes))
     assert(ret, "request_authenticated? failed for POST")
   end
 
@@ -77,8 +79,8 @@ class HmacVerifyTest < Minitest::Test
     params[:timestamp] = params[:timestamp].to_i - 901
     hmac = Acquia::HTTPHmac::Auth.new(@realm, @secret)
     get = hmac.prepare_request_headers(params)
-    header = Acquia::HTTPHmac::Auth::parse_auth_header(get['Authorization'])
-    ret = hmac.request_authenticated?(header, params)
+    attributes = Acquia::HTTPHmac::Auth::parse_auth_header(get['Authorization'])
+    ret = hmac.request_authenticated?(params.merge(attributes))
     assert(!ret, "request_authenticated? accepted old timestamp")
   end
 end

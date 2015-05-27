@@ -111,6 +111,27 @@ class TestRackApp < Minitest::Test
     assert_equal(403, last_response.status)
   end
 
+  def test_403_missing_header_get
+    passwords = get_password_storage
+    id = passwords.ids.first
+    # Pass a header expected to be signed.
+    prepare_get(id, passwords.data(id)['password'], headers: {'X-Custom-Foo' => 'nick'})
+    get '/hello'
+    # The expected header was missing.
+    assert_equal(403, last_response.status)
+  end
+
+  def test_403_mismatched_header_get
+    passwords = get_password_storage
+    id = passwords.ids.first
+    # Pass a header expected to be signed.
+    prepare_get(id, passwords.data(id)['password'], headers: {'X-Custom-Foo' => 'nick'})
+    # The expected header has a different value.
+    header('X-Custom-Foo', 'nack')
+    get '/hello'
+    assert_equal(403, last_response.status)
+  end
+
   def test_simple_get
     passwords = get_password_storage
     passwords.ids.each do |id|
@@ -128,6 +149,46 @@ class TestRackApp < Minitest::Test
       mac = Acquia::HTTPHmac::Auth.new('Test', passwords.data(id)['password'])
       assert_equal(response_hmac, mac.signature(args[:nonce] + "\n" + last_response.body))
     end
+  end
+
+  def test_get_with_extra_header
+    passwords = get_password_storage
+    id = passwords.ids.first
+    # Pass a header expected to be signed.
+    prepare_get(id, passwords.data(id)['password'], headers: {'X-Custom-Foo' => 'nick'})
+    header('X-Custom-Foo', 'nick')
+    get '/hello'
+    assert_equal(200, last_response.status)
+  end
+
+  def test_get_with_quoted_header
+    passwords = get_password_storage
+    id = passwords.ids.first
+    # Pass a header expected to be signed.
+    prepare_get(id, passwords.data(id)['password'], headers: {'X-Custom-Foo' => '"nick"'})
+    header('X-Custom-Foo', '"nick"')
+    get '/hello'
+    assert_equal(200, last_response.status)
+  end
+
+  def test_get_with_spaces_in_header
+    passwords = get_password_storage
+    id = passwords.ids.first
+    # Pass a header expected to be signed.
+    prepare_get(id, passwords.data(id)['password'], headers: {'X-Custom-Foo' => 'a b c '})
+    header('X-Custom-Foo', ' a b c   ')
+    get '/hello'
+    assert_equal(200, last_response.status)
+  end
+
+  def test_get_with_spaces_in_quoted_header
+    passwords = get_password_storage
+    id = passwords.ids.first
+    # Pass a header expected to be signed.
+    prepare_get(id, passwords.data(id)['password'], headers: {'X-Custom-Foo' => '"hi nick" '})
+    header('X-Custom-Foo', ' "hi nick"   ')
+    get '/hello'
+    assert_equal(200, last_response.status)
   end
 
   def test_simple_post

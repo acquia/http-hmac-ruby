@@ -25,6 +25,7 @@ module Acquia
       #   - query_string: A query string for GET or HEAD requests.
       #   - body: The request body for non-GET/HEAD.
       #   - content_type: the value being set for Content-Type header.
+      #   - headers: a has of additional headers to sign.
       def prepare_request_headers(args = {})
         merged_args = {
           http_method: nil,
@@ -34,6 +35,7 @@ module Acquia
           query_string: '',
           body: '',
           content_type: '',
+          headers: {},
           body_hash: nil,
           version: VERSION,
         }.merge(args)
@@ -58,31 +60,32 @@ module Acquia
         authorization << "id=\"#{URI.encode(args[:id])}\""
         authorization << "nonce=\"#{args[:nonce]}\""
         authorization << "version=\"#{VERSION}\""
+        authorization << "headers=\"#{args[:headers].keys.join(';')}\""
         authorization << "signature=\"#{signature(base_string)}\""
         headers['Authorization'] = authorization.join(',')
         headers
       end
 
-      # Check if a request is aithorized.
+      # Check if a request is authenticated.
       #
-      # @param [String] auth_attributes
-      #   The value of the parsed request Authorization header
       # @param [Hash] args
-      #   Supported keys with String values:
+      #   Expected keys with String values including values from the parsed request Authorization header
+      #   - realm: The realm from the request
+      #   - nonce: the nonce from the request
+      #   - signature: the signature from the request
+      #   - headers: [Hash] of additional String header names and values to be signed.
       #   - http_method: GET, POST, etc. Required.
       #   - host: the HTTP host name, like www.example.com. Required.
       #   - timestamp: Unix timestamp from the X-Acquia-Timestamp header
       #   - query_string: A query string for GET or HEAD requests.
       #   - content_type: the value being set for Content-Type header.
-      def request_authenticated?(auth_attributes = {}, args = {})
-        return false unless auth_attributes[:realm] == @realm
-        return false unless auth_attributes[:nonce].match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/)
+      def request_authenticated?(args = {})
+        return false unless args[:realm] == @realm
+        return false unless args[:nonce].match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/)
         # Allow up to 900 sec (15 min) of clock skew.
         return false if (Time.now.to_i - args[:timestamp].to_i).abs > 900
-        # Get :id, :nonce, :version from the attributes
-        args = args.merge(auth_attributes)
         base_string = prepare_base_string(args)
-        signature(base_string) == auth_attributes[:signature]
+        signature(base_string) == args[:signature]
       end
 
       # Common helper method for creating the string to sign.
@@ -102,18 +105,16 @@ module Acquia
       def prepare_base_string(args = {})
         args[:http_method].upcase!
         base_string_parts = [args[:http_method], args[:host].downcase, args[:path_info]]
-        base_string_parts << normalize_query(args[:query_string])
+        base_string_parts << self.class.normalize_query(args[:query_string])
         base_string_parts << "id=#{URI.encode(args[:id])}&nonce=#{args[:nonce]}&realm=#{URI.encode(@realm)}&version=#{args[:version]}"
-        if args[:headers]
-          headers = args[:headers].to_a.sort do |x,y|
-            (key_x, val_x) = x
-            (key_y, val_y) = y
-            key_x.downcase <=> key_y.downcase
-          end
-          headers.each do |h|
-            (name, value) = h
-            base_string_parts << "#{name.downcase}:#{value.strip}"
-          end
+        headers = args[:headers].to_a.sort do |x,y|
+          (key_x, val_x) = x
+          (key_y, val_y) = y
+          key_x.downcase <=> key_y.downcase
+        end
+        headers.each do |h|
+          (name, value) = h
+          base_string_parts << "#{name.downcase}:#{value.strip}"
         end
         base_string_parts << args[:timestamp]
         unless ['GET', 'HEAD'].include?(args[:http_method])
@@ -147,7 +148,7 @@ module Acquia
       # Helper method for sorting the query string for signing.
       #
       # @param [String] query_string
-      def normalize_query(query_string)
+      def self.normalize_query(query_string)
         normalized = ''
         parts = query_string.split('&').map do |p|
           unless p.include?('=')
