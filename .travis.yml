@@ -2,4 +2,9 @@ language: ruby
 rvm:
   - "2.1.5"
   - "2.2.2"
-script: bundle exec rake test
+before_script:
+ - bundle exec example/config.ru
+ - sleep 3
+script:
+ - bundle exec rake test
+ - example/test.sh
