@@ -3,7 +3,7 @@ rvm:
   - "2.1.5"
   - "2.2.2"
 before_script:
- - bundle exec example/config.ru
+ - bundle exec rackup -p8010 example/config.ru
  - sleep 3
 script:
  - bundle exec rake test
