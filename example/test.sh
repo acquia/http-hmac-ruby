@@ -10,8 +10,12 @@ PATH_INFO="/hello"
 QUERY_STRING=""
 ID=curltest
 REALM=Test
-# On BSD systems, an uppercase uuid is returned
-NONCE=$(uuidgen | tr 'ABCDEF' 'abcdef')
+if `which uuidgen`; then
+  # On BSD systems, an uppercase uuid is returned
+  NONCE=$(uuidgen | tr 'ABCDEF' 'abcdef')
+else
+  NONCE=$(ruby -e "require 'securerandom'; print SecureRandom.uuid")
+fi
 TIME=$(date +%s)
 
 STRING_TO_SIGN=\
