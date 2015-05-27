@@ -98,11 +98,23 @@ module Acquia
       #   - content_type: the value being set for Content-Type header.
       #   - nonce: a UUID
       #   - timestamp: a UNIX timpstamp as float with microsecond precision.
+      #   - headers: a hash containing additional header name/value pairs to be included.
       def prepare_base_string(args = {})
         args[:http_method].upcase!
         base_string_parts = [args[:http_method], args[:host].downcase, args[:path_info]]
         base_string_parts << normalize_query(args[:query_string])
         base_string_parts << "id=#{URI.encode(args[:id])}&nonce=#{args[:nonce]}&realm=#{URI.encode(@realm)}&version=#{args[:version]}"
+        if args[:headers]
+          headers = args[:headers].to_a.sort do |x,y|
+            (key_x, val_x) = x
+            (key_y, val_y) = y
+            key_x.downcase <=> key_y.downcase
+          end
+          headers.each do |h|
+            (name, value) = h
+            base_string_parts << "#{name.downcase}:#{value.strip}"
+          end
+        end
         base_string_parts << args[:timestamp]
         unless ['GET', 'HEAD'].include?(args[:http_method])
           base_string_parts << args[:content_type].downcase
@@ -114,6 +126,7 @@ module Acquia
       def self.parse_auth_header(header)
         attributes = {
           id: '',
+          headers: '',
           nonce: '',
           realm: '',
           signature: '',
@@ -124,6 +137,10 @@ module Acquia
           break unless m
           attributes[m[1].to_sym] = URI.decode(m[2])
         end
+        # Re-format custom headers to hash keys.
+        parts = attributes[:headers].split(';')
+        attributes[:headers] = {}
+        parts.each { |name| attributes[:headers][name] = '' }
         attributes
       end
 
