@@ -10,7 +10,7 @@ PATH_INFO="/hello"
 QUERY_STRING=""
 ID=curltest
 REALM=Test
-if `which uuidgen`; then
+if [ -n "$(which uuidgen)" ]; then
   # On BSD systems, an uppercase uuid is returned
   NONCE=$(uuidgen | tr 'ABCDEF' 'abcdef')
 else
