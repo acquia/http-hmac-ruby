@@ -28,7 +28,7 @@ module Acquia
         # Pass the id to later stages
         env['ACQUIA_AUTHENTICATED_ID'] = attributes[:id]
         (status, headers, resp_body) = @app.call(env)
-        sign_response(status, headers, resp_body, args[:nonce], mac)
+        sign_response(status, headers, resp_body, args[:nonce], args[:timestamp], mac)
       end
 
       private
@@ -46,7 +46,10 @@ module Acquia
 
       def denied(message)
         [ 403,
-          { 'Content-Type' => 'text/plain' },
+          {
+            'Content-Type' => 'text/plain',
+            'Connection' => 'close',
+          },
           [message]
         ]
       end
@@ -67,8 +70,8 @@ module Acquia
           http_method: request.request_method,
           path_info: request.path_info,
           content_type: request.content_type,
-          body_hash: env['HTTP_X_ACQUIA_CONTENT_SHA256'],
-          timestamp: env['HTTP_X_ACQUIA_TIMESTAMP'].to_i,
+          body_hash: env['HTTP_X_AUTHORIZATION_CONTENT_SHA256'],
+          timestamp: env['HTTP_X_AUTHORIZATION_TIMESTAMP'].to_i,
         }.merge(attributes)
         # Map expected header names to the key that would be in env.
         attributes[:headers].keys.each do |name|
@@ -86,7 +89,7 @@ module Acquia
         else
           body = request.body.gets   # read the incoming request IO stream
           body_hash = Base64.strict_encode64(OpenSSL::Digest::SHA256.digest(body))
-          body_hash == env['HTTP_X_ACQUIA_CONTENT_SHA256']
+          body_hash == env['HTTP_X_AUTHORIZATION_CONTENT_SHA256']
         end
       end
 
@@ -99,12 +102,12 @@ module Acquia
       # @param [Acquia::HTTPHmac::Auth] mac
       #
       # @return Array
-      def sign_response(status, headers, resp_body, nonce, mac)
+      def sign_response(status, headers, resp_body, nonce, timestamp, mac)
         final_body = ''
         # Rack defines the response body as implementing #each
         resp_body.each { |part| final_body << part }
         # Use the request nonce to sign the response.
-        headers['X-Acquia-Content-HMAC-SHA256'] = mac.signature(nonce + "\n" + final_body)
+        headers['X-Server-Authorization-HMAC-SHA256'] = mac.signature(nonce + "\n" + timestamp.to_s + "\n" + final_body)
         # Nobody should be changing or caching this response.
         headers['Cache-Control'] = 'no-transform, no-cache, no-store, private, max-age=0'
         [status, headers, [final_body]]
@@ -149,7 +152,7 @@ module Acquia
 
     class NoopNonceChecker
       def valid?(id, nonce)
-        true
+        nonce.length == 36
       end
     end
 

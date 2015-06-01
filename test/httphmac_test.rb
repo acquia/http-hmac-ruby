@@ -3,17 +3,6 @@ require_relative '../lib/acquia-http-hmac'
 
 class TestHTTPHmac < Minitest::Test
 
-  def test_normalize_query
-    query_string = 'base=foo&all'
-    assert_equal(Acquia::HTTPHmac::Auth.normalize_query(query_string), 'all=&base=foo')
-    query_string = 'page=1&base=foo&all&base=zzz'
-    assert_equal(Acquia::HTTPHmac::Auth.normalize_query(query_string), 'all=&base=foo&base=zzz&page=1')
-    query_string = 'page=1&base=foo&all&base=zzz&base=foo'
-    assert_equal(Acquia::HTTPHmac::Auth.normalize_query(query_string), 'all=&base=foo&base=foo&base=zzz&page=1')
-    query_string = 'page=1&base=foo&all&base=z%22z%22z'
-    assert_equal(Acquia::HTTPHmac::Auth.normalize_query(query_string), 'all=&base=foo&base=z%22z%22z&page=1')
-  end
-
   def test_prepare_request_get
     mac = Acquia::HTTPHmac::Auth.new('TestRealm', "dGhlc2VjcmV0")
     args = {
@@ -53,13 +42,13 @@ class TestHTTPHmac < Minitest::Test
     # GET
     # www.example.com
     # /hello
-    # all=&base=foo
+    # base=foo&all
     # id=test&nonce=f2c91a46-b505-4b50-afa2-21364dc8ff34&realm=TestRealm&version=2.0
     # 1432180014
     m = auth_header.match(/.*,signature="([^"]+)"$/)
     assert(m, 'Did not find signature')
     # Compare to a signature calulated with the base string in PHP.
-    assert_equal("5GQY2YnJVjenSJI9g0ak9staO5fNMFPiJJWfxuM3PbU=", m[1])
+    assert_equal("dvl8wLvEcLbAtKfvIYaIGThIXHBpOtOTw7dQX4nBjwM=", m[1])
   end
 
   def test_prepare_request_get_headers
@@ -82,14 +71,14 @@ class TestHTTPHmac < Minitest::Test
     # GET
     # www.example.com
     # /hello
-    # all=&base=foo
+    # base=foo&all
     # id=test&nonce=f2c91a46-b505-4b50-afa2-21364dc8ff34&realm=TestRealm&version=2.0
     # x-custom-foo:nick
     # 1432180014
     m = auth_header.match(/.*,signature="([^"]+)"$/)
     assert(m, 'Did not find signature')
     # Compare to a signature calulated with the base string in PHP.
-    assert_equal("w+YEYF4EoPeHwgVYmb4cinWtwblG5MMMgxXAymbqiGU=", m[1])
+    assert_equal("RuYnAieiiOOWWAZ0tjZ/+HMebpBCBhGSYEWWBF+lP28=", m[1])
   end
 
   def test_prepare_request_post
@@ -108,7 +97,7 @@ class TestHTTPHmac < Minitest::Test
     headers = mac.prepare_request_headers(args)
     auth_header = headers['Authorization']
     assert(auth_header.match /acquia-http-hmac realm="TestRealm",id="test",nonce="[0-9a-f-]{36}",version="2\.0",headers="[^"]*",signature="[^"]+"/)
-    assert_equal(headers['X-Acquia-Content-SHA256'], "6paRNxUA7WawFxJpRp4cEixDjHq3jfIKX072k9slalo=")
+    assert_equal(headers['X-Authorization-Content-SHA256'], "6paRNxUA7WawFxJpRp4cEixDjHq3jfIKX072k9slalo=")
     # We expect the following base string:
     # POST
     # www.example.com

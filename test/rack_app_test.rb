@@ -140,14 +140,14 @@ class TestRackApp < Minitest::Test
       assert_equal(200, last_response.status)
       response_hmac = nil
       last_response.headers.each do |name, value|
-        if name.downcase == 'x-acquia-content-hmac-sha256'
+        if name.downcase == 'x-server-authorization-hmac-sha256'
           response_hmac = value
           break
         end
       end
       assert(response_hmac, 'Did not find response HMAC header')
       mac = Acquia::HTTPHmac::Auth.new('Test', passwords.data(id)['password'])
-      assert_equal(response_hmac, mac.signature(args[:nonce] + "\n" + last_response.body))
+      assert_equal(response_hmac, mac.signature(args[:nonce] + "\n" + args[:timestamp].to_s + "\n" + last_response.body))
     end
   end
 

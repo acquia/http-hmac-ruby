@@ -46,10 +46,10 @@ module Acquia
         args[:nonce] ||= SecureRandom.uuid
 
         headers = {}
-        headers['X-Acquia-Timestamp'] = args[:timestamp]
+        headers['X-Authorization-Timestamp'] = args[:timestamp]
         unless ['GET', 'HEAD'].include?(args[:http_method])
           args[:body_hash] = Base64.strict_encode64(OpenSSL::Digest::SHA256.digest(args[:body]))
-          headers['X-Acquia-Content-SHA256'] = args[:body_hash]
+          headers['X-Authorization-Content-SHA256'] = args[:body_hash]
         end
         # Discourage intermediate proxies from altering the content.
         headers['Cache-Control'] = 'no-transform'
@@ -76,7 +76,7 @@ module Acquia
       #   - headers: [Hash] of additional String header names and values to be signed.
       #   - http_method: GET, POST, etc. Required.
       #   - host: the HTTP host name, like www.example.com. Required.
-      #   - timestamp: Unix timestamp from the X-Acquia-Timestamp header
+      #   - timestamp: Unix timestamp from the X-Authorization-Timestamp header
       #   - query_string: A query string for GET or HEAD requests.
       #   - content_type: the value being set for Content-Type header.
       def request_authenticated?(args = {})
@@ -105,7 +105,7 @@ module Acquia
       def prepare_base_string(args = {})
         args[:http_method].upcase!
         base_string_parts = [args[:http_method], args[:host].downcase, args[:path_info]]
-        base_string_parts << self.class.normalize_query(args[:query_string])
+        base_string_parts << args[:query_string]
         base_string_parts << "id=#{URI.encode(args[:id])}&nonce=#{args[:nonce]}&realm=#{URI.encode(@realm)}&version=#{args[:version]}"
         headers = args[:headers].to_a.sort do |x,y|
           (key_x, val_x) = x
@@ -143,29 +143,6 @@ module Acquia
         attributes[:headers] = {}
         parts.each { |name| attributes[:headers][name] = '' }
         attributes
-      end
-
-      # Helper method for sorting the query string for signing.
-      #
-      # @param [String] query_string
-      def self.normalize_query(query_string)
-        normalized = ''
-        parts = query_string.split('&').map do |p|
-          unless p.include?('=')
-            p << '='
-          end
-          p.split('=', 2)
-        end
-        sorted_parts = parts.sort do |x, y|
-          (key_x, val_x) = x
-          (key_y, val_y) = y
-          if key_x == key_y
-            val_x <=> val_y
-          else
-            key_x <=> key_y
-          end
-        end
-        normalized = sorted_parts.map {|p| "#{p[0]}=#{p[1]}" }.join('&')
       end
 
       def signature(base_string)

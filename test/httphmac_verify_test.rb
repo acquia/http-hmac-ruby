@@ -65,7 +65,7 @@ class HmacVerifyTest < Minitest::Test
 
   def test_post_with_body
     params = post_params
-    params[:body_hash] = @req_post['X-Acquia-Content-SHA256']
+    params[:body_hash] = @req_post['X-Authorization-Content-SHA256']
     attributes = Acquia::HTTPHmac::Auth::parse_auth_header(@req_post['Authorization'])
     hmac = Acquia::HTTPHmac::Auth.new(@realm, @secret)
     ret = hmac.request_authenticated?(params.merge(attributes))
