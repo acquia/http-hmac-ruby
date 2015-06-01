@@ -1,8 +1,7 @@
 #!/bin/bash
 
-HFILE=$(mktemp /tmp/headers.XXXXXX)
-
 HMAC_KEY=$(echo -n "Y3VybHRlc3RrZXlfNzY0MWM3NTgtMDViMi00ZTIzLWJkMDktMWYwZDU3NTk0ZDhj" | openssl base64 -d -A)
+HOST=localhost:8010
 
 get_nonce() {
   if [ -n "$(which uuidgen)" ]; then
@@ -19,8 +18,6 @@ get_nonce() {
 # - query string
 # - JSON body
 check_request() {
-
-  HOST=localhost:8010
   METHOD="$1"
   PATH_INFO="$2"
   QUERY_STRING="$3"
@@ -47,6 +44,8 @@ $TIME"
 
   # Construct the authorization header
   AUTHORIZATION="Authorization: acquia-http-hmac realm=\"${REALM}\",id=\"${ID}\",nonce=\"${NONCE}\",version=\"2.0\",headers=\"\",signature=\"${SIGNATURE}\""
+
+  HFILE=$(mktemp /tmp/headers.XXXXXX)
 
   if [ "$METHOD" != "GET" ]; then
     BODY=$(curl -s -X$METHOD "http://${HOST}${PATH_INFO}?${QUERY_STRING}" -H "$AUTHORIZATION" -H "X-Authorization-timestamp: ${TIME}" -H "X-Authorization-Content-SHA256: $SHA256" -H 'Content-Type: application/json' --data-binary "$4" -D $HFILE)
@@ -84,3 +83,15 @@ check_request "POST" "/hello" "" '{"hello":"from curl","params":["5","4","8"]}'
 check_request "GET" "/hello" ""
 check_request "GET" "/hello" "test=me&uuu=kkk"
 
+# Check a path that has is excluded from authentication.
+
+HFILE=$(mktemp /tmp/headers.XXXXXX)
+
+BODY=$(curl -s -XGET "http://${HOST}/healthcheck" -H "$AUTHORIZATION" -D $HFILE)
+
+CODE=$(awk '$0 ~ "^HTTP/" { print $2 }' $HFILE)
+if [ "$CODE" != "200" ]; then
+  echo "Non-200 response: $CODE"
+  exit 1
+fi
+echo "Success: $BODY"

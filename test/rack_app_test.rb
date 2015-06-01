@@ -51,7 +51,13 @@ class TestRackApp < Minitest::Test
       map "/" do
         # Need this base middleware so that request.logger is defined.
         use Rack::NullLogger
-        use Acquia::HTTPHmac::RackAuthenticate, :password_storage => passwords, :realm => 'Test', :nonce_checker => Acquia::HTTPHmac::MemoryNonceChecker.new
+        options = {
+          password_storage: passwords,
+          realm: 'Test',
+          nonce_checker: Acquia::HTTPHmac::MemoryNonceChecker.new,
+          excluded_paths: ['/healthcheck'],
+        }
+        use Acquia::HTTPHmac::RackAuthenticate, options
         run Example::App
       end
     }.to_app
@@ -62,6 +68,12 @@ class TestRackApp < Minitest::Test
     get '/hello'
     assert_equal(401, last_response.status, "Didn't get a 401 response code")
     assert(last_response.headers['WWW-Authenticate'], "Didn't get a WWW-Authenticate header in the response")
+  end
+
+  def test_excluded_get
+    # Don't add any headers.
+    get '/healthcheck'
+    assert_equal(200, last_response.status, "Didn't get a 200 response code")
   end
 
   def test_403_bad_authorization_header

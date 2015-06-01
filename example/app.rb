@@ -38,5 +38,13 @@ module Example
         {id => params[:hello]}
       end
     end
+
+    resource :healthcheck do
+      desc 'Get the current helath status of the service'
+      get do
+        status 200
+        { status: 'okay' }
+      end
+    end
   end
 end
