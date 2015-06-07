@@ -1,15 +1,14 @@
-require 'minitest/autorun'
 require 'rack/test'
 
-require_relative '../lib/acquia-http-hmac/rack_authenticate'
-require_relative '../example/app'
+require 'acquia-http-hmac/rack_authenticate'
+require_relative '../../example/app'
 
-class TestRackApp < Minitest::Test
+module TestRackAppBase
   include Rack::Test::Methods
 
-  def get_password_storage
-    @passwords ||= Acquia::HTTPHmac::FilePasswordStorage.new(File.dirname(__FILE__) + '/../fixtures/passwords.yml')
-  end
+  # Need to define methods in test classes:
+  # get_password_storage
+  # get_password
 
   # Helper method
   def prepare_get(id, password, args = {})
@@ -87,7 +86,7 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     id = passwords.ids.first
     # Use an invalid password by adding a letter.
-    prepare_get(id, 'a' + passwords.data(id)['password'])
+    prepare_get(id, 'a' + get_password(id))
     get '/hello'
     assert_equal(403, last_response.status)
   end
@@ -96,7 +95,7 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     id = passwords.ids.first
     # Use an invalid id by adding a letter.
-    prepare_get(id + 'a', passwords.data(id)['password'])
+    prepare_get(id + 'a', get_password(id))
     get '/hello'
     assert_equal(403, last_response.status)
   end
@@ -105,7 +104,7 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     id = passwords.ids.first
     # Use an invalid nonce, not a UUID.
-    prepare_get(id, passwords.data(id)['password'], nonce: 'wxyz')
+    prepare_get(id, get_password(id), nonce: 'wxyz')
     get '/hello'
     assert_equal(403, last_response.status)
   end
@@ -114,11 +113,11 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     id = passwords.ids.first
     nonce = SecureRandom.uuid
-    prepare_get(id, passwords.data(id)['password'], nonce: nonce)
+    prepare_get(id, get_password(id), nonce: nonce)
     get '/hello'
     assert_equal(200, last_response.status)
     # Repeat with the same nonce.
-    prepare_get(id, passwords.data(id)['password'], nonce: nonce)
+    prepare_get(id, get_password(id), nonce: nonce)
     get '/hello'
     assert_equal(403, last_response.status)
   end
@@ -127,7 +126,7 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     id = passwords.ids.first
     # Pass a header expected to be signed.
-    prepare_get(id, passwords.data(id)['password'], headers: {'X-Custom-Foo' => 'nick'})
+    prepare_get(id, get_password(id), headers: {'X-Custom-Foo' => 'nick'})
     get '/hello'
     # The expected header was missing.
     assert_equal(403, last_response.status)
@@ -137,7 +136,7 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     id = passwords.ids.first
     # Pass a header expected to be signed.
-    prepare_get(id, passwords.data(id)['password'], headers: {'X-Custom-Foo' => 'nick'})
+    prepare_get(id, get_password(id), headers: {'X-Custom-Foo' => 'nick'})
     # The expected header has a different value.
     header('X-Custom-Foo', 'nack')
     get '/hello'
@@ -147,7 +146,7 @@ class TestRackApp < Minitest::Test
   def test_simple_get
     passwords = get_password_storage
     passwords.ids.each do |id|
-      args = prepare_get(id, passwords.data(id)['password'])
+      args = prepare_get(id, get_password(id))
       get '/hello'
       assert_equal(200, last_response.status)
       response_hmac = nil
@@ -158,7 +157,7 @@ class TestRackApp < Minitest::Test
         end
       end
       assert(response_hmac, 'Did not find response HMAC header')
-      mac = Acquia::HTTPHmac::Auth.new('Test', passwords.data(id)['password'])
+      mac = Acquia::HTTPHmac::Auth.new('Test', get_password(id))
       assert_equal(response_hmac, mac.signature(args[:nonce] + "\n" + args[:timestamp].to_s + "\n" + last_response.body))
     end
   end
@@ -167,7 +166,7 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     id = passwords.ids.first
     # Pass a header expected to be signed.
-    prepare_get(id, passwords.data(id)['password'], headers: {'X-Custom-Foo' => 'nick'})
+    prepare_get(id, get_password(id), headers: {'X-Custom-Foo' => 'nick'})
     header('X-Custom-Foo', 'nick')
     get '/hello'
     assert_equal(200, last_response.status)
@@ -177,7 +176,7 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     id = passwords.ids.first
     # Pass a header expected to be signed.
-    prepare_get(id, passwords.data(id)['password'], headers: {'X-Custom-Foo' => '"nick"'})
+    prepare_get(id, get_password(id), headers: {'X-Custom-Foo' => '"nick"'})
     header('X-Custom-Foo', '"nick"')
     get '/hello'
     assert_equal(200, last_response.status)
@@ -187,7 +186,7 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     id = passwords.ids.first
     # Pass a header expected to be signed.
-    prepare_get(id, passwords.data(id)['password'], headers: {'X-Custom-Foo' => 'a b c '})
+    prepare_get(id, get_password(id), headers: {'X-Custom-Foo' => 'a b c '})
     header('X-Custom-Foo', ' a b c   ')
     get '/hello'
     assert_equal(200, last_response.status)
@@ -197,7 +196,7 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     id = passwords.ids.first
     # Pass a header expected to be signed.
-    prepare_get(id, passwords.data(id)['password'], headers: {'X-Custom-Foo' => '"hi nick" '})
+    prepare_get(id, get_password(id), headers: {'X-Custom-Foo' => '"hi nick" '})
     header('X-Custom-Foo', ' "hi nick"   ')
     get '/hello'
     assert_equal(200, last_response.status)
@@ -207,7 +206,7 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     passwords.ids.each do |id|
       body = '{"hello":"hi.bob","params":["5","4","8"]}'
-      prepare_post(id, passwords.data(id)['password'], body)
+      prepare_post(id, get_password(id), body)
       post '/hello', body
       assert_equal(201, last_response.status)
     end
@@ -217,7 +216,7 @@ class TestRackApp < Minitest::Test
     passwords = get_password_storage
     id = passwords.ids.first
     body = '{"hello":"hi.bob","params":["5","4","8"]}'
-    prepare_post(id, passwords.data(id)['password'], body)
+    prepare_post(id, get_password(id), body)
     # Create a mismatch by adding an extra character to the body.
     post '/hello', body + 'a'
     assert_equal(403, last_response.status)
