@@ -19,4 +19,5 @@ Gem::Specification.new do |s|
   s.add_development_dependency('grape', '~> 0.9.0')
   s.add_development_dependency('rack-test', '~> 0.6.3')
   s.add_development_dependency('multi_json', '~> 1.10')
+  s.add_development_dependency('sqlite3', '~> 1.3', '>= 1.3.10')
 end

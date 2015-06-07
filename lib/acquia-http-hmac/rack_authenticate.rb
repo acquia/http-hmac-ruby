@@ -30,8 +30,9 @@ module Acquia
 
         return denied('Invalid body') unless valid_body?(env)
 
-        # Pass the id to later stages
-        env['ACQUIA_AUTHENTICATED_ID'] = attributes[:id]
+        # Pass the id & data to later stages
+        env['ACQUIA-HTTP-HMAC-ID'] = attributes[:id]
+        env['ACQUIA-HTTP-HMAC-DATA'] = @password_storage.data(attributes[:id])
         (status, headers, resp_body) = @app.call(env)
         sign_response(status, headers, resp_body, args[:nonce], args[:timestamp], mac)
       end
@@ -120,13 +121,12 @@ module Acquia
 
     end
 
-    class FilePasswordStorage
+    ### The class below are primarily for testing.
 
-      def initialize(filename)
-        @@creds = {}
-        if File.exist?(filename)
-          @@creds = YAML.safe_load(File.read(filename))
-        end
+    class SimplePasswordStorage
+
+      def initialize(creds = {})
+        @@creds = creds
       end
 
       def valid?(id)
@@ -152,6 +152,17 @@ module Acquia
 
       def ids
         @@creds.keys
+      end
+    end
+
+    class FilePasswordStorage < SimplePasswordStorage
+
+      def initialize(filename)
+        creds = {}
+        if File.exist?(filename)
+          creds = YAML.safe_load(File.read(filename))
+        end
+        super(creds)
       end
     end
 
