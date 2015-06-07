@@ -8,7 +8,7 @@ class TestRackApp < Minitest::Test
   include Rack::Test::Methods
 
   def get_password_storage
-    @passwords ||= Acquia::HTTPHmac::FilePasswordStorage.new(File.dirname(__FILE__) + '/../example/passwords.yml')
+    @passwords ||= Acquia::HTTPHmac::FilePasswordStorage.new(File.dirname(__FILE__) + '/../fixtures/passwords.yml')
   end
 
   # Helper method

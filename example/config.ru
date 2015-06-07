@@ -7,7 +7,7 @@ require_relative 'app'
 require 'acquia-http-hmac/rack_authenticate'
 
 unless ENV['NO_AUTHENTICATION']
-  passwords = Acquia::HTTPHmac::FilePasswordStorage.new(File.dirname(__FILE__) + '/../example/passwords.yml')
+  passwords = Acquia::HTTPHmac::FilePasswordStorage.new(File.dirname(__FILE__) + '/../fixtures/passwords.yml')
   options = {
     password_storage: passwords,
     realm: 'Test',

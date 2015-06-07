@@ -121,7 +121,7 @@ module Acquia
 
     end
 
-    ### The class below are primarily for testing.
+    ### The classes below are primarily for testing.
 
     class SimplePasswordStorage
 
