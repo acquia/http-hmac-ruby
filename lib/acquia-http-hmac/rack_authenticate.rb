@@ -89,11 +89,14 @@ module Acquia
 
       def valid_body?(env)
         request = Rack::Request.new(env)
-        if ['GET', 'HEAD'].include?(request.request_method)
+        # Read the incoming request IO stream.
+        body = request.body.read
+        # Allow other middleware to access the body also.
+        request.body.rewind if request.body.respond_to?(:rewind)
+        if body.empty? && env['HTTP_X_AUTHORIZATION_CONTENT_SHA256'].nil?
           # No body to validate
           true
         else
-          body = request.body.gets   # read the incoming request IO stream
           body_hash = Base64.strict_encode64(OpenSSL::Digest::SHA256.digest(body))
           body_hash == env['HTTP_X_AUTHORIZATION_CONTENT_SHA256']
         end

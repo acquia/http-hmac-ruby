@@ -23,7 +23,7 @@ module Acquia
       #   - id: the client id or API key identifying the requestor. Required.
       #   - path_info: The request path with leading slash.
       #   - query_string: A query string for GET or HEAD requests.
-      #   - body: The request body for non-GET/HEAD.
+      #   - body: The request body (omit or leave empty for normal GET/HEAD requests).
       #   - content_type: the value being set for Content-Type header.
       #   - headers: a has of additional headers to sign.
       def prepare_request_headers(args = {})
@@ -47,7 +47,7 @@ module Acquia
 
         headers = {}
         headers['X-Authorization-Timestamp'] = args[:timestamp]
-        unless ['GET', 'HEAD'].include?(args[:http_method])
+        unless args[:body].nil? || (args[:body].length == 0)
           args[:body_hash] = Base64.strict_encode64(OpenSSL::Digest::SHA256.digest(args[:body]))
           headers['X-Authorization-Content-SHA256'] = args[:body_hash]
         end
@@ -117,7 +117,7 @@ module Acquia
           base_string_parts << "#{name.downcase}:#{value.strip}"
         end
         base_string_parts << args[:timestamp]
-        unless ['GET', 'HEAD'].include?(args[:http_method])
+        unless args[:body_hash].nil?
           base_string_parts << args[:content_type].downcase
           base_string_parts << args[:body_hash]
         end
