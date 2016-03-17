@@ -41,7 +41,6 @@ module Acquia
         }.merge(args)
         # Replace args so that the calling method gets all the values.
         args.replace(merged_args)
-        args[:http_method].upcase!
         args[:timestamp] ||= Time.now.to_i.to_s
         args[:nonce] ||= SecureRandom.uuid
 
@@ -103,7 +102,6 @@ module Acquia
       #   - timestamp: a UNIX timpstamp as float with microsecond precision.
       #   - headers: a hash containing additional header name/value pairs to be included.
       def prepare_base_string(args = {})
-        args[:http_method].upcase!
         base_string_parts = [args[:http_method], args[:host].downcase, args[:path_info]]
         base_string_parts << args[:query_string]
         base_string_parts << "id=#{URI.encode(args[:id])}&nonce=#{args[:nonce]}&realm=#{URI.encode(@realm)}&version=#{args[:version]}"
