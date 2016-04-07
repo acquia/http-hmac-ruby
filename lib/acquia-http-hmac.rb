@@ -81,8 +81,9 @@ module Acquia
       def request_authenticated?(args = {})
         return false unless args[:realm] == @realm
         return false unless args[:nonce].match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/)
-        # Allow up to 900 sec (15 min) of clock skew.
-        return false if (Time.now.to_i - args[:timestamp].to_i).abs > 900
+        # Allow up to 900 sec (15 min) of clock skew by default.
+        allowed_skew = args[:allowed_skew] || 900
+        return false if (Time.now.to_i - args[:timestamp].to_i).abs > allowed_skew
         base_string = prepare_base_string(args)
         signature(base_string) == args[:signature]
       end
