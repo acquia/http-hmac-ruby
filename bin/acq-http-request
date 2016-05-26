@@ -1,79 +1,102 @@
 #!/usr/bin/env ruby
 
+
+require 'commander'
+require 'uri'
+require 'base64'
+require 'rest-client'
 require 'acquia-http-hmac'
-require 'optparse'
-require 'ostruct'
 
-if ARGV[0]
-  url = ARGV[0]
+class AcquiaHttpRequest
+  include Commander::Methods
+
+  def run
+    program :name, 'acq-http-request'
+    program :version, Acquia::HTTPHmac::VERSION
+    program :description, 'Simple curl-like tool with Acquia HMAC v2 support'
+    default_command :curl
+    global_option('-v', '--verbose') { @verbose = true }
+
+    command :curl do |c|
+      c.syntax = 'acq-http-request curl [options]'
+      c.summary = 'Send an HMACv2 authenticated HTTP request to the specified URL'
+      c.description = c.summary
+      c.option '-d DATA', '--data DATA', String, "Sends the specified data in a POST request to the HTTP server. @filename send the contents of 'filename'."
+      c.option '-j', '--json', 'Handle DATA as JSON. (Send proper content-type header, etc). If not specified, DATA is handled as application/x-www-form-urlencoded.'
+      c.option '-r REALM', '--realm REALM', String, "Server auth realm. Default 'Test'."
+      c.option '-X METHOD', '--request METHOD', String, 'Request method to send to the server. Default: GET, or POST if --data is specified.'
+      c.option '-u ID:PASSWORD', '--user ID:PASSWORD', String, "HMAC credentials separated with a ':'."
+      c.action do |args, options|
+        validate_options!(options)
+        uri = validate_uri(args)
+        res = do_request(uri, options)
+        puts res.body
+      end
+    end
+
+    run!
+  end
+
+  private
+
+  def do_request(uri, options)
+    id, password = options.user.split(':', 2)
+    secret = Base64.urlsafe_encode64(password)
+    mac = Acquia::HTTPHmac::Auth.new(options.realm, secret)
+    args = {
+      http_method: options.request,
+      host: uri.host,
+      id: id,
+      path_info: uri.path
+    }
+    args[:query_string] = uri.query unless uri.query.nil? || uri.query.empty?
+    if options.data
+      args[:body] = if options.data[0] == '@'
+                      File.read(options.data[1..-1])
+                    else
+                      options.data
+                    end
+      args[:content_type] = if options.json
+                              'application/json'
+                            else
+                              'application/x-www-form-urlencoded'
+                            end
+    end
+    headers = mac.prepare_request_headers(args)
+    headers['Content-Type'] = args[:content_type]
+    RestClient.log = 'stdout' if @verbose
+    RestClient::Request.execute(
+      method: options.request.downcase.to_sym,
+      url: uri.to_s,
+      payload: args[:body],
+      headers: headers
+    ) { |response, _request, _result| response }
+  end
+
+  def validate_uri(args)
+    abort 'Expecting a single URL as argument.' unless args.length == 1
+    url = args[0]
+    url = "http://#{url}" unless url =~ %r{^http(s)?:\/\/}
+    uri = URI(url)
+    uri.path = '/' if uri.path.nil? || uri.path.empty?
+    uri
+  end
+
+  def validate_options!(options)
+    options.default(
+      request: options.data ? 'POST' : 'GET',
+      json: false
+    )
+    abort 'Missing mandatory parameter: user' unless options.user
+    abort 'Missing mandatory parameter: realm' unless options.realm
+    options.request.upcase!
+    unless %w(GET HEAD POST PUT DELETE).include? options.request
+      abort 'Invalid request method'
+    end
+    if options.data.nil? && options.json
+      abort 'You need to specify --data with --json.'
+    end
+  end
 end
 
-# Argument processing
-options = OpenStruct.new
-options.realm = 'Test'
-options.http_method = 'GET'
-o = OptionParser.new do |opts|
-  opts.banner = "Usage: #{$0} URL -u ID:PASSWORD"
-  opts.on("-r", "--realm [REALM]", "Server auth realm. Default 'Test'.") { |v| options.realm = v }
-  opts.on("-u", "--user [ID:PASSWORD]", "HMAC creds") { |v| options.user = v }
-  opts.on("-d", "--data [DATA]", "Data to POST.") { |v| options.data = v }
-  opts.on("-X", "--request [METHOD]", "HTTP method.  Defaults to GET, or POST if --data is specified.") { |v| options.http_method = v.upcase }
-end
-begin
-  o.parse!
-rescue Exception => e
-  puts e.message
-  puts o.help
-  exit 1
-end
-
-if ARGV.empty? or !options.user
-  puts o.help
-  exit
-end
-
-uri = URI(URI.encode(url))
-
-if uri.path == ''
-  uri.path = '/'
-end
-
-host = uri.host
-if uri.port && uri.port != '443'
-  host << ':' + uri.port
-end
-
-id, password = options.user.split(':', 2)
-
-mac = Acquia::HTTPHmac::Auth.new(options.realm, password)
-
-
-
-args = {
-  http_method: options.http_method,
-  host: host,
-  id: id,
-  path_info: uri.path,
-}
-
-case
-when options.http_method == 'GET'
-  req = Net::HTTP::GET.new(uri)
-when options.http_method == 'HEAD'
-  req = Net::HTTP::HEAD.new(uri)
-when options.http_method == 'POST'
-  req = Net::HTTP::POST.new(uri)
-when options.http_method == 'PUT'
-  req = Net::HTTP::PUT.new(uri)
-when options.http_method == 'DELETE'
-  req = Net::HTTP::DELETE.new(uri)
-else
-  fail("Unsupported HTTP verb #{options.http_method}")
-end
-mac.prepare_request_headers(args).each do |name, value|
-  #header(name, value)
-end
-
-net = Net::HTTP.new(uri.host, uri.port)
-net.use_ssl= uri.host != 'localhost'
-
+AcquiaHttpRequest.new.run
