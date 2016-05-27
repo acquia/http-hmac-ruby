@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
   s.executables << 'acq-http-request'
 
   s.add_dependency('commander', '~> 4.4')
-  s.add_dependency('rest-client', '~> 1.8')
+  s.add_dependency('excon', '~> 0.49')
 
   s.add_development_dependency('rake', '~> 10.4')
   s.add_development_dependency('grape', '~> 0.9.0')

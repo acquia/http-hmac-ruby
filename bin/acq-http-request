@@ -4,7 +4,7 @@
 require 'commander'
 require 'uri'
 require 'base64'
-require 'rest-client'
+require 'excon'
 require 'acquia-http-hmac'
 
 class AcquiaHttpRequest
@@ -64,13 +64,13 @@ class AcquiaHttpRequest
     end
     headers = mac.prepare_request_headers(args)
     headers['Content-Type'] = args[:content_type]
-    RestClient.log = 'stdout' if @verbose
-    RestClient::Request.execute(
+    ENV['EXCON_DEBUG'] = @verbose.to_s if @verbose
+    connection = Excon.new(uri.to_s)
+    connection.request(
       method: options.request.downcase.to_sym,
-      url: uri.to_s,
-      payload: args[:body],
-      headers: headers
-    ) { |response, _request, _result| response }
+      headers: headers,
+      body: args[:body]
+    )
   end
 
   def validate_uri(args)
