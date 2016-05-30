@@ -13,6 +13,9 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.executables << 'acq-http-request'
 
+  s.add_dependency('commander', '~> 4.4')
+  s.add_dependency('excon', '~> 0.49')
+
   s.add_development_dependency('rake', '~> 10.4')
   s.add_development_dependency('grape', '~> 0.9.0')
   s.add_development_dependency('rack-test', '~> 0.6.3')
