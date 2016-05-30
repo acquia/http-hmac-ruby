@@ -45,10 +45,14 @@ class AcquiaHttpRequest
     mac = Acquia::HTTPHmac::Auth.new(options.realm, secret)
     args = {
       http_method: options.request,
-      host: uri.host,
       id: id,
       path_info: uri.path
     }
+    args[:host] = if uri.port == uri.default_port
+                    uri.host
+                  else
+                    "#{uri.host}:#{uri.port}"
+                  end
     args[:query_string] = uri.query unless uri.query.nil? || uri.query.empty?
     if options.data
       args[:body] = if options.data[0] == '@'
