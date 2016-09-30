@@ -18,7 +18,7 @@ module Acquia
         # Scan the PATH_INFO for the excluded paths; string or regexp
         # Accepted excluded path formats: '/version', /\/version/, %r(/version)
         if @excluded_paths
-          path_regex = Regexp.union([*@excluded_paths].map { |e| e.is_a?(Regexp) ? e : /^#{e}$/ })
+          path_regex = Regexp.union([*@excluded_paths].map { |e| e.is_a?(Regexp) ? e : /^#{e}/ })
           return @app.call(env) if env['PATH_INFO'] =~ path_regex
         end
 
