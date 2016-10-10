@@ -23,15 +23,20 @@ module Acquia
         return unauthorized if auth_header.empty?
 
         attributes = Acquia::HTTPHmac::Auth.parse_auth_header(auth_header)
+
+        # Pass the id to later stages
+        # Replaced id here to be able to log invalid requests too
+        env['ACQUIA-HTTP-HMAC-ID'] = attributes[:id]
+
         return denied('Invalid nonce') unless @nonce_checker.valid?(attributes[:id], attributes[:nonce])
+
         args = args_for_authenticator(env, attributes)
         mac = message_authenticator(args[:id], args[:timestamp])
         return denied('Invalid credentials') unless mac && mac.request_authenticated?(args)
 
         return denied('Invalid body') unless valid_body?(env)
 
-        # Pass the id & data to later stages
-        env['ACQUIA-HTTP-HMAC-ID'] = attributes[:id]
+        # Pass the data to later stages
         env['ACQUIA-HTTP-HMAC-DATA'] = @password_storage.data(attributes[:id])
         (status, headers, resp_body) = @app.call(env)
         sign_response(status, headers, resp_body, args[:nonce], args[:timestamp], mac)
