@@ -114,7 +114,7 @@ module Acquia
       def sign_response(status, headers, resp_body, nonce, timestamp, mac)
         final_body = ''
         # Rack defines the response body as implementing #each
-        resp_body.each { |part| final_body << part }
+        resp_body.each { |part| final_body << part.to_s }
         # Use the request nonce to sign the response.
         headers['X-Server-Authorization-HMAC-SHA256'] = mac.signature(nonce + "\n" + timestamp.to_s + "\n" + final_body)
         # Nobody should be changing or caching this response.
