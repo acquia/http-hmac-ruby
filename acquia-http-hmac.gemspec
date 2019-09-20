@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'acquia-http-hmac'
-  s.version = '2.0.0.pre3'
+  s.version = '2.0.2'
   s.licenses = ['MIT']
   s.summary = "HMAC signing library and rack middleware"
   s.description = "HMAC signing library and rack middleware conforming to Acquia's HMAC 2.0 specifications"
