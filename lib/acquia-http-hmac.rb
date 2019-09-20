@@ -91,9 +91,9 @@ module Acquia
       # Check if a response is signed with the matching secret.
       #
       # @param [String] nonce
-      #   Nonce from the *request* the caused this response.
+      #   Nonce from the *request* that caused this response.
       # @param [String] timestamp
-      #   Timestamp from the *request* the caused this response.
+      #   Timestamp from the *request* that caused this response.
       # @param body
       #   Body from the response.
       # @param signature
