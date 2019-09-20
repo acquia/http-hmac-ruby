@@ -88,6 +88,22 @@ module Acquia
         signature(base_string) == args[:signature]
       end
 
+      # Check if a response is signed with the matching secret.
+      #
+      # @param [String] nonce
+      #   Nonce from the *request* that caused this response.
+      # @param [String] timestamp
+      #   Timestamp from the *request* that caused this response.
+      # @param body
+      #   Body from the response.
+      # @param signature
+      #   Signature from the response headers.
+      # @return [bool]
+      def response_authenticated?(nonce:, timestamp:, body:, signature:)
+        base_string = [nonce, timestamp, body].join("\n")
+        signature(base_string) == signature
+      end
+
       # Common helper method for creating the string to sign.
       #
       # @param [Hash] args

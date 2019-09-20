@@ -158,7 +158,12 @@ module TestRackAppBase
       end
       assert(response_hmac, 'Did not find response HMAC header')
       mac = Acquia::HTTPHmac::Auth.new('Test', get_password(id))
-      assert_equal(response_hmac, mac.signature(args[:nonce] + "\n" + args[:timestamp].to_s + "\n" + last_response.body))
+      assert(mac.response_authenticated?(
+               nonce: args.fetch(:nonce),
+               timestamp: args.fetch(:timestamp),
+               body: last_response.body,
+               signature: last_response['x-server-authorization-hmac-sha256']
+             ))
     end
   end
 
