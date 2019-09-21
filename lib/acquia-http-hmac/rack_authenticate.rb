@@ -23,6 +23,8 @@ module Acquia
         return unauthorized if auth_header.empty?
 
         attributes = Acquia::HTTPHmac::Auth.parse_auth_header(auth_header)
+        # Put the id into a variable regardless of authentication so we can read/log it later
+        env['REQUESTED_HMAC_ID'] = attributes[:id]
         return denied('Invalid nonce') unless @nonce_checker.valid?(attributes[:id], attributes[:nonce])
         args = args_for_authenticator(env, attributes)
         mac = message_authenticator(args[:id], args[:timestamp])
