@@ -15,10 +15,13 @@ module Acquia
       end
 
       def call(env)
-        # Skip paths based on a list of prefixes.
-        if @excluded_paths && env['PATH_INFO'].start_with?(*@excluded_paths)
-          return @app.call(env)
+        # Scan the PATH_INFO for the excluded paths; string or regexp
+        # Accepted excluded path formats: '/version', /\/version/, %r(/version)
+        if @excluded_paths
+          path_regex = Regexp.union([*@excluded_paths].map { |e| e.is_a?(Regexp) ? e : /^#{e}/ })
+          return @app.call(env) if env['PATH_INFO'] =~ path_regex
         end
+
         auth_header = env['HTTP_AUTHORIZATION'].to_s
         return unauthorized if auth_header.empty?
 
@@ -191,4 +194,3 @@ module Acquia
     end
   end
 end
-
