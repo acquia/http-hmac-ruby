@@ -13,9 +13,9 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.executables << 'acq-http-request'
 
-  s.add_development_dependency('rake', '~> 10.4')
-  s.add_development_dependency('grape', '~> 0.9.0')
-  s.add_development_dependency('rack-test', '~> 0.6.3')
-  s.add_development_dependency('multi_json', '~> 1.10')
-  s.add_development_dependency('sqlite3', '~> 1.3', '>= 1.3.10')
+  s.add_development_dependency('rake')
+  s.add_development_dependency('grape')
+  s.add_development_dependency('rack-test')
+  s.add_development_dependency('multi_json')
+  s.add_development_dependency('sqlite3')
 end
