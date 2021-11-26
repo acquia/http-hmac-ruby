@@ -2,6 +2,7 @@ language: ruby
 rvm:
   - "2.6"
   - "2.7"
+  - "3.0"
 before_script:
  - "bundle exec rackup -p8010 example/config.ru &"
  - "sleep 3"

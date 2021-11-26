@@ -1,7 +1,7 @@
+require 'addressable'
 require 'openssl'
 require 'base64'
 require 'securerandom'
-require 'uri'
 
 module Acquia
   module HTTPHmac
@@ -55,8 +55,8 @@ module Acquia
         base_string = prepare_base_string(args)
 
         authorization = []
-        authorization << "acquia-http-hmac realm=\"#{URI.encode(@realm)}\""
-        authorization << "id=\"#{URI.encode(args[:id])}\""
+        authorization << "acquia-http-hmac realm=\"#{Addressable::URI.escape(@realm)}\""
+        authorization << "id=\"#{Addressable::URI.escape(args[:id])}\""
         authorization << "nonce=\"#{args[:nonce]}\""
         authorization << "version=\"#{VERSION}\""
         authorization << "headers=\"#{args[:headers].keys.join(';')}\""
@@ -121,7 +121,7 @@ module Acquia
       def prepare_base_string(args = {})
         base_string_parts = [args[:http_method], args[:host].downcase, args[:path_info]]
         base_string_parts << args[:query_string]
-        base_string_parts << "id=#{URI.encode(args[:id])}&nonce=#{args[:nonce]}&realm=#{URI.encode(@realm)}&version=#{args[:version]}"
+        base_string_parts << "id=#{Addressable::URI.escape(args[:id])}&nonce=#{args[:nonce]}&realm=#{Addressable::URI.escape(@realm)}&version=#{args[:version]}"
         headers = args[:headers].to_a.sort do |x,y|
           (key_x, val_x) = x
           (key_y, val_y) = y
@@ -151,7 +151,7 @@ module Acquia
         header.to_s.sub(/^acquia-http-hmac\s+/, '').split(/,\s*/).each do |value|
           m = value.match(/^(\w+)\=\"([^\"]*)\"$/)
           break unless m
-          attributes[m[1].to_sym] = URI.decode(m[2])
+          attributes[m[1].to_sym] = Addressable::URI.unescape(m[2])
         end
         # Re-format custom headers to hash keys.
         parts = attributes[:headers].split(';')
