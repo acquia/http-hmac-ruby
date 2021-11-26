@@ -35,7 +35,7 @@ class TestAcquiaHmacSpec < Minitest::Test
       headers = mac.prepare_request_headers(args)
 
       # Prove we can generate the correct Authorization header.
-      expected_realm = URI::encode(input['realm'])
+      expected_realm = Addressable::URI.escape(input['realm'])
       assert(headers['Authorization'].include?("realm=\"#{expected_realm}\""))
       assert(headers['Authorization'].include?("id=\"#{input['id']}\""))
       assert(headers['Authorization'].include?("nonce=\"#{input['nonce']}\""))
