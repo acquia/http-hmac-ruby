@@ -32,7 +32,7 @@ if ARGV.empty? or !options.user
   exit
 end
 
-uri = URI(URI.encode(url))
+uri = URI(Addressable::URI.escape.encode(url))
 
 if uri.path == ''
   uri.path = '/'
