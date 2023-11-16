@@ -1,0 +1,19 @@
+openapi: 3.0.1
+info:
+  title: http-hmac-ruby
+  description: Enhancing web app and API security through Acquia HTTP HMAC Spec implementation.
+  x-cortex-tag: acquia/http-hmac-ruby
+  x-cortex-git:
+    github:
+      repository: acquia/http-hmac-ruby
+  x-cortex-owners:
+    - type: GROUP
+      name: acquia/cloud-cde
+      provider: GITHUB
+      description: platform classic team
+    - type: SLACK
+      channel: cloud-eng-platform-classic-alerts
+      notificationsEnabled: true
+      description: pc notifications
+  x-cortex-groups:
+    - drupal-cloud
