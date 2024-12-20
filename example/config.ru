@@ -1,18 +1,19 @@
 #!/usr/bin/env rackup -p8010
+# frozen_string_literal: true
 
-require "bundler/setup"
+require 'bundler/setup'
 Bundler.require
 
 require_relative 'app'
 require 'acquia-http-hmac/rack_authenticate'
 
 unless ENV['NO_AUTHENTICATION']
-  passwords = Acquia::HTTPHmac::FilePasswordStorage.new(File.dirname(__FILE__) + '/../fixtures/passwords.yml')
+  passwords = Acquia::HTTPHmac::FilePasswordStorage.new("#{File.dirname(__FILE__)}/../fixtures/passwords.yml")
   options = {
     password_storage: passwords,
     realm: 'Test',
     nonce_checker: Acquia::HTTPHmac::MemoryNonceChecker.new,
-    excluded_paths: ['/healthcheck'],
+    excluded_paths: ['/healthcheck']
   }
   use Acquia::HTTPHmac::RackAuthenticate, options
 end

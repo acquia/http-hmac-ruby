@@ -1,10 +1,11 @@
 require 'yaml'
 require 'openssl'
 require 'base64'
-require_relative '../acquia-http-hmac'
+require_relative '../acquia_http_hmac'
 
 module Acquia
   module HTTPHmac
+    # Class: RackAuthenticate
     class RackAuthenticate
       def initialize(app, options)
         @password_storage = options[:password_storage]
@@ -16,17 +17,17 @@ module Acquia
 
       def call(env)
         # Skip paths based on a list of prefixes.
-        if @excluded_paths && env['PATH_INFO'].start_with?(*@excluded_paths)
-          return @app.call(env)
-        end
+        return @app.call(env) if @excluded_paths && env['PATH_INFO'].start_with?(*@excluded_paths)
+
         auth_header = env['HTTP_AUTHORIZATION'].to_s
         return unauthorized if auth_header.empty?
 
         attributes = Acquia::HTTPHmac::Auth.parse_auth_header(auth_header)
         return denied('Invalid nonce') unless @nonce_checker.valid?(attributes[:id], attributes[:nonce])
+
         args = args_for_authenticator(env, attributes)
         mac = message_authenticator(args[:id], args[:timestamp])
-        return denied('Invalid credentials') unless mac && mac.request_authenticated?(args)
+        return denied('Invalid credentials') unless mac&.request_authenticated?(args)
 
         return denied('Invalid body') unless valid_body?(env)
 
@@ -40,31 +41,27 @@ module Acquia
       private
 
       def unauthorized
-        [ 401,
-          {
-            'Content-Type' => 'text/plain',
-            'Content-Length' => '0',
-            'WWW-Authenticate' => 'acquia-http-hmac realm="'+ @realm +'"'
-          },
-          []
-        ]
+        [401,
+         {
+           'Content-Type' => 'text/plain',
+           'Content-Length' => '0',
+           'WWW-Authenticate' => "acquia-http-hmac realm=\"#{@realm}\""
+         },
+         []]
       end
 
       def denied(message)
-        [ 403,
-          {
-            'Content-Type' => 'text/plain',
-            'Connection' => 'close',
-          },
-          [message]
-        ]
+        [403,
+         {
+           'Content-Type' => 'text/plain',
+           'Connection' => 'close'
+         },
+         [message]]
       end
 
       def message_authenticator(id, timestamp)
         mac = nil
-        if @password_storage.valid?(id)
-          mac = Acquia::HTTPHmac::Auth.new(@realm, @password_storage.password(id, timestamp))
-        end
+        mac = Acquia::HTTPHmac::Auth.new(@realm, @password_storage.password(id, timestamp)) if @password_storage.valid?(id)
         mac
       end
 
@@ -77,11 +74,11 @@ module Acquia
           path_info: request.path_info,
           content_type: request.content_type,
           body_hash: env['HTTP_X_AUTHORIZATION_CONTENT_SHA256'],
-          timestamp: env['HTTP_X_AUTHORIZATION_TIMESTAMP'].to_i,
+          timestamp: env['HTTP_X_AUTHORIZATION_TIMESTAMP'].to_i
         }.merge(attributes)
         # Map expected header names to the key that would be in env.
-        attributes[:headers].keys.each do |name|
-          key = 'HTTP_' + name.gsub('-', '_').upcase
+        attributes[:headers].each_key do |name|
+          key = "HTTP_#{name.gsub('-', '_').upcase}"
           args[:headers][name] = env[key] if env[key]
         end
         args
@@ -116,18 +113,17 @@ module Acquia
         # Rack defines the response body as implementing #each
         resp_body.each { |part| final_body << part }
         # Use the request nonce to sign the response.
-        headers['X-Server-Authorization-HMAC-SHA256'] = mac.signature(nonce + "\n" + timestamp.to_s + "\n" + final_body)
+        headers['X-Server-Authorization-HMAC-SHA256'] = mac.signature("#{nonce}\n#{timestamp}\n#{final_body}")
         # Nobody should be changing or caching this response.
         headers['Cache-Control'] = 'no-transform, no-cache, no-store, private, max-age=0'
         [status, headers, [final_body]]
       end
-
     end
 
     ### The classes below are primarily for testing.
 
+    # Class: SimplePasswordStorage
     class SimplePasswordStorage
-
       def initialize(creds = {})
         @@creds = creds
       end
@@ -143,13 +139,15 @@ module Acquia
       # @param [Integer] timestamp
       #   A unix timestamp. The returned password may be different based on
       #   the current date or time.
-      def password(id, timestamp)
-        fail('Invalid id') unless @@creds[id] && @@creds[id]['password']
+      def password(id, _timestamp)
+        raise('Invalid id') unless @@creds[id] && @@creds[id]['password']
+
         @@creds[id]['password']
       end
 
       def data(id)
-        fail('Invalid id') unless @@creds[id]
+        raise('Invalid id') unless @@creds[id]
+
         @@creds[id]
       end
 
@@ -158,23 +156,23 @@ module Acquia
       end
     end
 
+    # Class: FilePasswordStorage
     class FilePasswordStorage < SimplePasswordStorage
-
       def initialize(filename)
         creds = {}
-        if File.exist?(filename)
-          creds = YAML.safe_load(File.read(filename))
-        end
+        creds = YAML.safe_load(File.read(filename)) if File.exist?(filename)
         super(creds)
       end
     end
 
+    # Class: NoopNonceChecker
     class NoopNonceChecker
-      def valid?(id, nonce)
+      def valid?(_id, nonce)
         nonce.length == 36
       end
     end
 
+    # Class: MemoryNonceChecker
     class MemoryNonceChecker
       def initialize
         @@seen = {}
@@ -183,6 +181,7 @@ module Acquia
       def valid?(id, nonce)
         # A UUID is 36 characters.
         return false unless nonce.length == 36
+
         @@seen[id] ||= {}
         valid = !@@seen[id][nonce]
         @@seen[id][nonce] = Time.now.to_i
@@ -191,4 +190,3 @@ module Acquia
     end
   end
 end
-

@@ -1,12 +1,13 @@
+# frozen_string_literal: true
+
 require 'openssl'
 require 'base64'
 require 'sqlite3'
 
 module Acquia
   module HTTPHmac
-
+    # Class: SQLite3PasswordStorage
     class SQLite3PasswordStorage
-
       def initialize(filename)
         @filename = filename
         @creds = {}
@@ -25,13 +26,15 @@ module Acquia
       #   A unix timestamp. The returned password may be different based on
       #   the current date or time.
       def password(id, timestamp)
-        fail('Invalid id') unless valid?(id)
+        raise('Invalid id') unless valid?(id)
+
         load(id, timestamp.to_i)
         @creds[id]['password']
       end
 
       def data(id)
-        fail('Invalid id') unless valid?(id)
+        raise('Invalid id') unless valid?(id)
+
         result = []
         connection.execute('SELECT * FROM password_data WHERE id = ?', [today]) do |row|
           result << row
@@ -51,17 +54,17 @@ module Acquia
 
       def load(id, timestamp = nil)
         date = timestamp ? Time.at(timestamp).utc.strftime('%F') : today
-        if @creds[id].nil? || date != today
-          @creds[id] = false
-          connection.execute('SELECT base64_password FROM passwords WHERE id = ? AND request_date = ?', [id, date]) do |row|
-            @creds[id] = {}
-            @creds[id]['password'] = row['base64_password']
-          end
+        return unless @creds[id].nil? || date != today
+
+        @creds[id] = false
+        connection.execute('SELECT base64_password FROM passwords WHERE id = ? AND request_date = ?', [id, date]) do |row|
+          @creds[id] = {}
+          @creds[id]['password'] = row['base64_password']
         end
       end
 
       def connection
-        @connection ||= SQLite3::Database.new(@filename,  { readonly: true, results_as_hash: true })
+        @connection ||= SQLite3::Database.new(@filename, { readonly: true, results_as_hash: true })
       end
 
       def today
@@ -70,4 +73,3 @@ module Acquia
     end
   end
 end
-

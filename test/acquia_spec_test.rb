@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'minitest/autorun'
-require_relative '../lib/acquia-http-hmac'
+require_relative '../lib/acquia_http_hmac'
 
 class TestAcquiaHmacSpec < Minitest::Test
-
   def test_fixture
     fixtures_path = File.join(File.dirname(__FILE__), '../fixtures/acquia_spec.json')
     fixtures_json = File.read(File.realpath(fixtures_path))
@@ -30,7 +31,7 @@ class TestAcquiaHmacSpec < Minitest::Test
         nonce: input['nonce'],
         timestamp: input['timestamp'],
         headers: signed_headers,
-        body_hash: body_hash,
+        body_hash: body_hash
       }
       headers = mac.prepare_request_headers(args)
 
@@ -41,18 +42,16 @@ class TestAcquiaHmacSpec < Minitest::Test
       assert(headers['Authorization'].include?("nonce=\"#{input['nonce']}\""))
       expected_headers = input['signed_headers'].join(';')
       assert(headers['Authorization'].include?("headers=\"#{expected_headers}\""))
-      assert(headers['Authorization'].include?("version=\"2.0\""))
+      assert(headers['Authorization'].include?('version="2.0"'))
       assert(headers['Authorization'].include?("signature=\"#{expectations['message_signature']}\""))
 
       # Prove that we can authenticate the request.
-      attributes = Acquia::HTTPHmac::Auth::parse_auth_header(expectations['authorization_header'])
+      attributes = Acquia::HTTPHmac::Auth.parse_auth_header(expectations['authorization_header'])
       auth_args = args.merge(attributes)
       auth_args[:allowed_skew] = input['timestamp'] + 900
       auth_args[:headers] = signed_headers
       ret = mac.request_authenticated?(auth_args)
       assert(ret, "request_authenticated? failed for #{input['name']}")
     end
-
   end
-
 end

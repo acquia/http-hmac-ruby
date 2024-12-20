@@ -1,0 +1,47 @@
+AllCops:
+  DisplayCopNames: true
+  NewCops: disable
+  TargetRubyVersion: 3.3.6
+
+Style/FrozenStringLiteralComment:
+  Exclude:
+    - 'lib/acquia-http-hmac/rack_authenticate.rb'
+
+Metrics/ParameterLists:
+  Max: 7
+
+Style/ClassVars:
+  Exclude:
+    - 'example/app.rb'
+    - 'lib/acquia-http-hmac/rack_authenticate.rb'
+
+Metrics/AbcSize:
+  Max: 50
+  Exclude:
+    - 'test/acquia_spec_test.rb'
+
+Naming/AccessorMethodName:
+  Exclude:
+    - 'test/rack_simple_app_test.rb'
+    - 'test/rack_sqlite3_app_test.rb'
+
+Metrics/BlockLength:
+  Max: 150
+
+Metrics/ClassLength:
+  Max: 1000
+
+Metrics/CyclomaticComplexity:
+  Max: 12
+
+Layout/LineLength:
+  Max: 200
+
+Metrics/MethodLength:
+  Max: 50
+
+Metrics/ModuleLength:
+  Max: 250
+
+Metrics/PerceivedComplexity:
+  Max: 10

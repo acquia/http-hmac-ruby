@@ -1,79 +1,71 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 require 'acquia-http-hmac'
 require 'optparse'
 require 'ostruct'
 
-if ARGV[0]
-  url = ARGV[0]
-end
+url = ARGV[0] if ARGV[0]
 
 # Argument processing
 options = OpenStruct.new
 options.realm = 'Test'
 options.http_method = 'GET'
 o = OptionParser.new do |opts|
-  opts.banner = "Usage: #{$0} URL -u ID:PASSWORD"
-  opts.on("-r", "--realm [REALM]", "Server auth realm. Default 'Test'.") { |v| options.realm = v }
-  opts.on("-u", "--user [ID:PASSWORD]", "HMAC creds") { |v| options.user = v }
-  opts.on("-d", "--data [DATA]", "Data to POST.") { |v| options.data = v }
-  opts.on("-X", "--request [METHOD]", "HTTP method.  Defaults to GET, or POST if --data is specified.") { |v| options.http_method = v.upcase }
+  opts.banner = "Usage: #{$PROGRAM_NAME} URL -u ID:PASSWORD"
+  opts.on('-r', '--realm [REALM]', "Server auth realm. Default 'Test'.") { |v| options.realm = v }
+  opts.on('-u', '--user [ID:PASSWORD]', 'HMAC creds') { |v| options.user = v }
+  opts.on('-d', '--data [DATA]', 'Data to POST.') { |v| options.data = v }
+  opts.on('-X', '--request [METHOD]', 'HTTP method.  Defaults to GET, or POST if --data is specified.') { |v| options.http_method = v.upcase }
 end
 begin
   o.parse!
-rescue Exception => e
+rescue StandardError => e
   puts e.message
   puts o.help
   exit 1
 end
 
-if ARGV.empty? or !options.user
+if ARGV.empty? || !options.user
   puts o.help
   exit
 end
 
 uri = URI(Addressable::URI.escape.encode(url))
 
-if uri.path == ''
-  uri.path = '/'
-end
+uri.path = '/' if uri.path == ''
 
 host = uri.host
-if uri.port && uri.port != '443'
-  host << ':' + uri.port
-end
+host << ":#{uri.port}" if uri.port && uri.port != '443'
 
 id, password = options.user.split(':', 2)
 
 mac = Acquia::HTTPHmac::Auth.new(options.realm, password)
 
-
-
 args = {
   http_method: options.http_method,
   host: host,
   id: id,
-  path_info: uri.path,
+  path_info: uri.path
 }
 
-case
-when options.http_method == 'GET'
-  req = Net::HTTP::GET.new(uri)
-when options.http_method == 'HEAD'
-  req = Net::HTTP::HEAD.new(uri)
-when options.http_method == 'POST'
-  req = Net::HTTP::POST.new(uri)
-when options.http_method == 'PUT'
-  req = Net::HTTP::PUT.new(uri)
-when options.http_method == 'DELETE'
-  req = Net::HTTP::DELETE.new(uri)
+case options.http_method
+when 'GET'
+  Net::HTTP::GET.new(uri)
+when 'HEAD'
+  Net::HTTP::HEAD.new(uri)
+when 'POST'
+  Net::HTTP::POST.new(uri)
+when 'PUT'
+  Net::HTTP::PUT.new(uri)
+when 'DELETE'
+  Net::HTTP::DELETE.new(uri)
 else
-  fail("Unsupported HTTP verb #{options.http_method}")
+  raise("Unsupported HTTP verb #{options.http_method}")
 end
 mac.prepare_request_headers(args).each do |name, value|
-  #header(name, value)
+  # header(name, value)
 end
 
 net = Net::HTTP.new(uri.host, uri.port)
-net.use_ssl= uri.host != 'localhost'
-
+net.use_ssl = uri.host != 'localhost'
