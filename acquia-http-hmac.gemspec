@@ -16,14 +16,14 @@ Gem::Specification.new do |s|
   s.require_paths = ['lib']
   s.executables << 'acq-http-request'
 
-  s.add_dependency 'addressable', '~> 2.4'
+  s.add_dependency 'addressable', '~> 2.8'
 
-  s.add_development_dependency('grape')
-  s.add_development_dependency('multi_json')
+  s.add_development_dependency('grape', '~> 2.2')
+  s.add_development_dependency('multi_json', '~> 1.15')
   s.add_development_dependency 'rack', '~> 2.2.10'
-  s.add_development_dependency('rack-test')
-  s.add_development_dependency('rake')
+  s.add_development_dependency('rack-test', '~> 2.1')
+  s.add_development_dependency('rake', '~> 13.2')
   s.add_development_dependency 'rubocop', '~> 1.69'
-  s.add_development_dependency('sqlite3')
-  s.add_development_dependency('webrick')
+  s.add_development_dependency('sqlite3', '~> 2.4')
+  s.add_development_dependency('webrick', '~> 1.9')
 end
