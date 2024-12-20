@@ -1,6 +1,6 @@
 #!/usr/bin/env rackup -p8010
 
-require "bundler/setup"
+require 'bundler/setup'
 Bundler.require
 
 require_relative 'app'
@@ -12,7 +12,7 @@ unless ENV['NO_AUTHENTICATION']
     password_storage: passwords,
     realm: 'Test',
     nonce_checker: Acquia::HTTPHmac::MemoryNonceChecker.new,
-    excluded_paths: ['/healthcheck'],
+    excluded_paths: ['/healthcheck']
   }
   use Acquia::HTTPHmac::RackAuthenticate, options
 end

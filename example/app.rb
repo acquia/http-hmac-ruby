@@ -14,28 +14,28 @@ module Example
     helpers do
       def hellos
         # Store data in memory for simple testing.
-        @@hellos ||= {SecureRandom.uuid => "world"}
+        @@hellos ||= { SecureRandom.uuid => 'world' }
         @@hellos
       end
     end
 
     resource :hello do
       get do
-        {hello: hellos}
+        { hello: hellos }
       end
 
-      desc "Return a single hello."
+      desc 'Return a single hello.'
       get ':id' do
-        {hello: hellos[params[:id]]}
+        { hello: hellos[params[:id]] }
       end
 
       params do
-        requires :hello, type: String, desc: "A hello."
+        requires :hello, type: String, desc: 'A hello.'
       end
       post do
         id = SecureRandom.uuid
         hellos[id] = params[:hello]
-        {id => params[:hello]}
+        { id => params[:hello] }
       end
     end
 

@@ -17,7 +17,7 @@ module TestRackAppBase
       http_method: 'GET',
       host: 'example.org', # Default in the Rack test
       id: id,
-      path_info: '/hello',
+      path_info: '/hello'
     }.merge(args)
     mac.prepare_request_headers(args).each do |name, value|
       header(name, value)
@@ -34,7 +34,7 @@ module TestRackAppBase
       id: id,
       path_info: '/hello',
       body: body,
-      content_type: 'application/json',
+      content_type: 'application/json'
     }.merge(args)
     mac.prepare_request_headers(args).each do |name, value|
       header(name, value)
@@ -46,20 +46,20 @@ module TestRackAppBase
   # Add just the auth middleware
   def app
     passwords = get_password_storage
-    Rack::Builder.new {
-      map "/" do
+    Rack::Builder.new do
+      map '/' do
         # Need this base middleware so that request.logger is defined.
         use Rack::NullLogger
         options = {
           password_storage: passwords,
           realm: 'Test',
           nonce_checker: Acquia::HTTPHmac::MemoryNonceChecker.new,
-          excluded_paths: ['/healthcheck'],
+          excluded_paths: ['/healthcheck']
         }
         use Acquia::HTTPHmac::RackAuthenticate, options
         run Example::App
       end
-    }.to_app
+    end.to_app
   end
 
   def test_401_get
@@ -126,7 +126,7 @@ module TestRackAppBase
     passwords = get_password_storage
     id = passwords.ids.first
     # Pass a header expected to be signed.
-    prepare_get(id, get_password(id), headers: {'X-Custom-Foo' => 'nick'})
+    prepare_get(id, get_password(id), headers: { 'X-Custom-Foo' => 'nick' })
     get '/hello'
     # The expected header was missing.
     assert_equal(403, last_response.status)
@@ -136,7 +136,7 @@ module TestRackAppBase
     passwords = get_password_storage
     id = passwords.ids.first
     # Pass a header expected to be signed.
-    prepare_get(id, get_password(id), headers: {'X-Custom-Foo' => 'nick'})
+    prepare_get(id, get_password(id), headers: { 'X-Custom-Foo' => 'nick' })
     # The expected header has a different value.
     header('X-Custom-Foo', 'nack')
     get '/hello'
@@ -171,7 +171,7 @@ module TestRackAppBase
     passwords = get_password_storage
     id = passwords.ids.first
     # Pass a header expected to be signed.
-    prepare_get(id, get_password(id), headers: {'X-Custom-Foo' => 'nick'})
+    prepare_get(id, get_password(id), headers: { 'X-Custom-Foo' => 'nick' })
     header('X-Custom-Foo', 'nick')
     get '/hello'
     assert_equal(200, last_response.status)
@@ -181,7 +181,7 @@ module TestRackAppBase
     passwords = get_password_storage
     id = passwords.ids.first
     # Pass a header expected to be signed.
-    prepare_get(id, get_password(id), headers: {'X-Custom-Foo' => '"nick"'})
+    prepare_get(id, get_password(id), headers: { 'X-Custom-Foo' => '"nick"' })
     header('X-Custom-Foo', '"nick"')
     get '/hello'
     assert_equal(200, last_response.status)
@@ -191,7 +191,7 @@ module TestRackAppBase
     passwords = get_password_storage
     id = passwords.ids.first
     # Pass a header expected to be signed.
-    prepare_get(id, get_password(id), headers: {'X-Custom-Foo' => 'a b c '})
+    prepare_get(id, get_password(id), headers: { 'X-Custom-Foo' => 'a b c ' })
     header('X-Custom-Foo', ' a b c   ')
     get '/hello'
     assert_equal(200, last_response.status)
@@ -201,7 +201,7 @@ module TestRackAppBase
     passwords = get_password_storage
     id = passwords.ids.first
     # Pass a header expected to be signed.
-    prepare_get(id, get_password(id), headers: {'X-Custom-Foo' => '"hi nick" '})
+    prepare_get(id, get_password(id), headers: { 'X-Custom-Foo' => '"hi nick" ' })
     header('X-Custom-Foo', ' "hi nick"   ')
     get '/hello'
     assert_equal(200, last_response.status)

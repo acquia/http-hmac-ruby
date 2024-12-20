@@ -8,7 +8,7 @@ class TestRackApp < Minitest::Test
     @passwords ||= Acquia::HTTPHmac::FilePasswordStorage.new(File.dirname(__FILE__) + '/../fixtures/passwords.yml')
   end
 
-  def get_password(id, timestamp = nil)
+  def get_password(id, _timestamp = nil)
     get_password_storage.data(id)['password']
   end
 end

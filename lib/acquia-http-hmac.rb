@@ -8,7 +8,6 @@ module Acquia
     VERSION = '2.0'
 
     class Auth
-
       def initialize(realm, base64_secret)
         @realm = realm
         @secret = Base64.decode64(base64_secret)
@@ -37,7 +36,7 @@ module Acquia
           content_type: '',
           headers: {},
           body_hash: nil,
-          version: VERSION,
+          version: VERSION
         }.merge(args)
         # Replace args so that the calling method gets all the values.
         args.replace(merged_args)
@@ -81,9 +80,11 @@ module Acquia
       def request_authenticated?(args = {})
         return false unless args[:realm] == @realm
         return false unless args[:nonce].match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/)
+
         # Allow up to 900 sec (15 min) of clock skew by default.
         allowed_skew = args[:allowed_skew] || 900
         return false if (Time.now.to_i - args[:timestamp].to_i).abs > allowed_skew
+
         base_string = prepare_base_string(args)
         signature(base_string) == args[:signature]
       end
@@ -122,9 +123,9 @@ module Acquia
         base_string_parts = [args[:http_method], args[:host].downcase, args[:path_info]]
         base_string_parts << args[:query_string]
         base_string_parts << "id=#{Addressable::URI.escape(args[:id])}&nonce=#{args[:nonce]}&realm=#{Addressable::URI.escape(@realm)}&version=#{args[:version]}"
-        headers = args[:headers].to_a.sort do |x,y|
-          (key_x, val_x) = x
-          (key_y, val_y) = y
+        headers = args[:headers].to_a.sort do |x, y|
+          (key_x,) = x
+          (key_y,) = y
           key_x.downcase <=> key_y.downcase
         end
         headers.each do |h|
@@ -146,11 +147,12 @@ module Acquia
           nonce: '',
           realm: '',
           signature: '',
-          version: '',
+          version: ''
         }
         header.to_s.sub(/^acquia-http-hmac\s+/, '').split(/,\s*/).each do |value|
-          m = value.match(/^(\w+)\=\"([^\"]*)\"$/)
+          m = value.match(/^(\w+)="([^"]*)"$/)
           break unless m
+
           attributes[m[1].to_sym] = Addressable::URI.unescape(m[2])
         end
         # Re-format custom headers to hash keys.
@@ -161,7 +163,7 @@ module Acquia
       end
 
       def signature(base_string)
-        Base64.strict_encode64(OpenSSL::HMAC.digest(OpenSSL::Digest::SHA256.new, @secret, base_string))
+        Base64.strict_encode64(OpenSSL::HMAC.digest(OpenSSL::Digest.new('SHA256'), @secret, base_string))
       end
     end
   end

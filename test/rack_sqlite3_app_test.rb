@@ -14,17 +14,17 @@ class TestSqlite3RackApp < Minitest::Test
     s = ExampleSQLite3Setup.new(@dbfile, @passwords_file)
     s.write_database
     @binary_passwords = {}
-    YAML.safe_load(File.read(@passwords_file)).each do |id,data|
+    YAML.safe_load(File.read(@passwords_file)).each do |id, data|
       @binary_passwords[id] = Base64.decode64(data['password'])
     end
   end
 
-  def get_password(id, timestamp = nil)
+  def get_password(id, _timestamp = nil)
     ts = Time.now.to_i
     date = Time.at(ts).utc.strftime('%F')
     realm = 'Test'
     # Run a 2-step HMAC KDF using date and realm
-    sha256 = OpenSSL::Digest::SHA256.new
+    sha256 = OpenSSL::Digest.new('SHA256')
     derived_pass1 = OpenSSL::HMAC.digest(sha256, @binary_passwords[id], date)
     derived_pass2 = OpenSSL::HMAC.digest(sha256, derived_pass1, realm)
     Base64.strict_encode64(derived_pass2)
@@ -33,5 +33,4 @@ class TestSqlite3RackApp < Minitest::Test
   def get_password_storage
     @storage ||= Acquia::HTTPHmac::SQLite3PasswordStorage.new(@dbfile)
   end
-
 end
