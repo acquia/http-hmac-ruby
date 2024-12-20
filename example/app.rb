@@ -1,9 +1,12 @@
+# frozen_string_literal: true
+
 require 'bundler/setup'
 require 'securerandom'
 require 'grape'
 require 'json'
 
 module Example
+  # Class: App
   class App < Grape::API
     version 'v1', using: :header, vendor: 'acquia'
 

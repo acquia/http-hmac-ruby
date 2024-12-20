@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'minitest/autorun'
 require 'base64'
 require 'openssl'
@@ -10,7 +12,7 @@ class TestSqlite3RackApp < Minitest::Test
 
   def setup
     @dbfile = File.join(File.dirname(__FILE__), '/../fixtures/passwords.sqlite3')
-    @passwords_file = File.dirname(__FILE__) + '/../fixtures/passwords.yml'
+    @passwords_file = "#{File.dirname(__FILE__)}/../fixtures/passwords.yml"
     s = ExampleSQLite3Setup.new(@dbfile, @passwords_file)
     s.write_database
     @binary_passwords = {}
@@ -31,6 +33,6 @@ class TestSqlite3RackApp < Minitest::Test
   end
 
   def get_password_storage
-    @storage ||= Acquia::HTTPHmac::SQLite3PasswordStorage.new(@dbfile)
+    @get_password_storage ||= Acquia::HTTPHmac::SQLite3PasswordStorage.new(@dbfile)
   end
 end

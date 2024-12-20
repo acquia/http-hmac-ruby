@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 Gem::Specification.new do |s|
   s.name = 'acquia-http-hmac'
   s.version = '2.0.3'

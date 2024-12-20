@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 require 'acquia-http-hmac'
 require 'optparse'
@@ -11,7 +12,7 @@ options = OpenStruct.new
 options.realm = 'Test'
 options.http_method = 'GET'
 o = OptionParser.new do |opts|
-  opts.banner = "Usage: #{$0} URL -u ID:PASSWORD"
+  opts.banner = "Usage: #{$PROGRAM_NAME} URL -u ID:PASSWORD"
   opts.on('-r', '--realm [REALM]', "Server auth realm. Default 'Test'.") { |v| options.realm = v }
   opts.on('-u', '--user [ID:PASSWORD]', 'HMAC creds') { |v| options.user = v }
   opts.on('-d', '--data [DATA]', 'Data to POST.') { |v| options.data = v }
@@ -19,13 +20,13 @@ o = OptionParser.new do |opts|
 end
 begin
   o.parse!
-rescue Exception => e
+rescue StandardError => e
   puts e.message
   puts o.help
   exit 1
 end
 
-if ARGV.empty? or !options.user
+if ARGV.empty? || !options.user
   puts o.help
   exit
 end
@@ -35,7 +36,7 @@ uri = URI(Addressable::URI.escape.encode(url))
 uri.path = '/' if uri.path == ''
 
 host = uri.host
-host << ':' + uri.port if uri.port && uri.port != '443'
+host << ":#{uri.port}" if uri.port && uri.port != '443'
 
 id, password = options.user.split(':', 2)
 
@@ -48,15 +49,16 @@ args = {
   path_info: uri.path
 }
 
-if options.http_method == 'GET'
+case options.http_method
+when 'GET'
   Net::HTTP::GET.new(uri)
-elsif options.http_method == 'HEAD'
+when 'HEAD'
   Net::HTTP::HEAD.new(uri)
-elsif options.http_method == 'POST'
+when 'POST'
   Net::HTTP::POST.new(uri)
-elsif options.http_method == 'PUT'
+when 'PUT'
   Net::HTTP::PUT.new(uri)
-elsif options.http_method == 'DELETE'
+when 'DELETE'
   Net::HTTP::DELETE.new(uri)
 else
   raise("Unsupported HTTP verb #{options.http_method}")

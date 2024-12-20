@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rack/test'
 
 require 'acquia-http-hmac/rack_authenticate'
@@ -86,7 +88,7 @@ module TestRackAppBase
     passwords = get_password_storage
     id = passwords.ids.first
     # Use an invalid password by adding a letter.
-    prepare_get(id, 'a' + get_password(id))
+    prepare_get(id, "a#{get_password(id)}")
     get '/hello'
     assert_equal(403, last_response.status)
   end
@@ -95,7 +97,7 @@ module TestRackAppBase
     passwords = get_password_storage
     id = passwords.ids.first
     # Use an invalid id by adding a letter.
-    prepare_get(id + 'a', get_password(id))
+    prepare_get("#{id}a", get_password(id))
     get '/hello'
     assert_equal(403, last_response.status)
   end
@@ -223,7 +225,7 @@ module TestRackAppBase
     body = '{"hello":"hi.bob","params":["5","4","8"]}'
     prepare_post(id, get_password(id), body)
     # Create a mismatch by adding an extra character to the body.
-    post '/hello', body + 'a'
+    post '/hello', "#{body}a"
     assert_equal(403, last_response.status)
   end
 end

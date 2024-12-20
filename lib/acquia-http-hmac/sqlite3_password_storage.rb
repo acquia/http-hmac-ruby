@@ -1,9 +1,12 @@
+# frozen_string_literal: true
+
 require 'openssl'
 require 'base64'
 require 'sqlite3'
 
 module Acquia
   module HTTPHmac
+    # Class: SQLite3PasswordStorage
     class SQLite3PasswordStorage
       def initialize(filename)
         @filename = filename

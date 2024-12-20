@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 require 'minitest/autorun'
-require_relative '../lib/acquia-http-hmac'
+require_relative '../lib/acquia_http_hmac'
 
 class TestAcquiaHmacSpec < Minitest::Test
   def test_fixture

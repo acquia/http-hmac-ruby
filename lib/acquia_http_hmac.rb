@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'addressable'
 require 'openssl'
 require 'base64'
@@ -7,6 +9,7 @@ module Acquia
   module HTTPHmac
     VERSION = '2.0'
 
+    # Class: Auth
     class Auth
       def initialize(realm, base64_secret)
         @realm = realm
@@ -45,7 +48,7 @@ module Acquia
 
         headers = {}
         headers['X-Authorization-Timestamp'] = args[:timestamp]
-        unless args[:body].nil? || (args[:body].length == 0)
+        unless args[:body].nil? || args[:body].empty?
           args[:body_hash] = Base64.strict_encode64(OpenSSL::Digest::SHA256.digest(args[:body]))
           headers['X-Authorization-Content-SHA256'] = args[:body_hash]
         end

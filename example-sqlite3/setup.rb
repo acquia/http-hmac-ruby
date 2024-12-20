@@ -1,8 +1,11 @@
+# frozen_string_literal: true
+
 require 'sqlite3'
 require 'base64'
 require 'openssl'
 require 'yaml'
 
+# Class: ExampleSQLite3Setup
 class ExampleSQLite3Setup
   def initialize(dbfile, passwords_file)
     @dbfile = dbfile
@@ -88,7 +91,7 @@ class ExampleSQLite3Setup
   end
 end
 
-if $0 == __FILE__
+if $PROGRAM_NAME == __FILE__
 
   mypath = File.dirname(__FILE__)
   dbfile = File.join(mypath, 'passwords.sqlite3')

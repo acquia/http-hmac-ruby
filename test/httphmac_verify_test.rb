@@ -1,9 +1,11 @@
+# frozen_string_literal: true
+
 require 'minitest/autorun'
 require 'base64'
-require_relative '../lib/acquia-http-hmac'
+require_relative '../lib/acquia_http_hmac'
 
 class HmacVerifyTest < Minitest::Test
-  def get_params
+  def params
     {
       http_method: 'GET',
       host: 'example.com',
@@ -37,28 +39,28 @@ class HmacVerifyTest < Minitest::Test
     @realm = 'TestRealm'
     hmac = Acquia::HTTPHmac::Auth.new(@realm, @secret)
 
-    @req_get = hmac.prepare_request_headers(get_params)
+    @req_get = hmac.prepare_request_headers(params)
     @req_post = hmac.prepare_request_headers(post_params)
   end
 
   def test_get_no_body
     attributes = Acquia::HTTPHmac::Auth.parse_auth_header(@req_get['Authorization'])
     hmac = Acquia::HTTPHmac::Auth.new(@realm, @secret)
-    ret = hmac.request_authenticated?(get_params.merge(attributes))
+    ret = hmac.request_authenticated?(params.merge(attributes))
     assert(ret, 'request_authenticated? failed for GET')
   end
 
   def test_it_fails_with_invalid_realm
     attributes = Acquia::HTTPHmac::Auth.parse_auth_header(@req_get['Authorization'])
     hmac = Acquia::HTTPHmac::Auth.new('bad_realm', @secret)
-    ret = hmac.request_authenticated?(get_params.merge(attributes))
+    ret = hmac.request_authenticated?(params.merge(attributes))
     assert(!ret, 'request_authenticated? accepted invalid realm')
   end
 
   def test_it_fails_with_invalid_secret
     attributes = Acquia::HTTPHmac::Auth.parse_auth_header(@req_get['Authorization'])
     hmac = Acquia::HTTPHmac::Auth.new(@realm, Base64.strict_encode64('wrong password'))
-    ret = hmac.request_authenticated?(get_params.merge(attributes))
+    ret = hmac.request_authenticated?(params.merge(attributes))
     assert(!ret, 'request_authenticated? accepted invalid secret')
   end
 
@@ -73,13 +75,13 @@ class HmacVerifyTest < Minitest::Test
 
   def test_it_requires_recent_timestamp
     # We need to do our own GET with a wrong timestamp here:
-    params = get_params
+    parameters = params
     # Put it 901 seconds in the past.
-    params[:timestamp] = params[:timestamp].to_i - 901
+    parameters[:timestamp] = parameters[:timestamp].to_i - 901
     hmac = Acquia::HTTPHmac::Auth.new(@realm, @secret)
-    get = hmac.prepare_request_headers(params)
+    get = hmac.prepare_request_headers(parameters)
     attributes = Acquia::HTTPHmac::Auth.parse_auth_header(get['Authorization'])
-    ret = hmac.request_authenticated?(params.merge(attributes))
+    ret = hmac.request_authenticated?(parameters.merge(attributes))
     assert(!ret, 'request_authenticated? accepted old timestamp')
   end
 end
